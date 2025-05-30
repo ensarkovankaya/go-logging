@@ -1,0 +1,5 @@
+package console
+
+func init() {
+
+}

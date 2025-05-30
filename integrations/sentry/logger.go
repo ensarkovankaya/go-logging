@@ -1,0 +1,254 @@
+package sentry
+
+import (
+	"context"
+	"fmt"
+	"github.com/getsentry/sentry-go"
+	"github.com/getsentry/sentry-go/attribute"
+	"go.uber.org/zap"
+	"go.uber.org/zap/buffer"
+	"go.uber.org/zap/zapcore"
+	"os"
+	"strings"
+	"time"
+
+	"go-logging/core"
+)
+
+var (
+	DefaultLevel           = zapcore.InfoLevel
+	DefaultBreadcrumbLevel = zapcore.DebugLevel
+)
+
+var (
+	envSentryLogLevel        = "SENTRY_LOG_LEVEL"
+	envSentryBreadcrumbLevel = "SENTRY_BREADCRUMB_LEVEL"
+)
+
+const Type = "sentry"
+
+type Option func(l *Logger)
+
+type Logger struct {
+	Level           zapcore.Level
+	BreadcrumbLevel zapcore.Level
+	Hub             *sentry.Hub
+	FlushTimeout    time.Duration
+	Name            string
+	NowFunc         func() time.Time
+	EncoderConfig   zapcore.EncoderConfig
+}
+
+func New(opts ...Option) *Logger {
+	if globalHub == nil {
+		return nil
+	}
+	logger := &Logger{
+		Level:           DefaultLevel,
+		BreadcrumbLevel: DefaultBreadcrumbLevel,
+		Hub:             globalHub,
+		FlushTimeout:    FLushTimeout,
+		NowFunc:         time.Now,
+		EncoderConfig:   zap.NewProductionEncoderConfig(),
+	}
+	for _, opt := range opts {
+		opt(logger)
+	}
+	return logger
+}
+
+func (l *Logger) Type() string {
+	return Type
+}
+
+func (l *Logger) With(fields ...core.Field) core.Logger {
+	if l == nil {
+		return nil
+	}
+	if len(fields) == 0 {
+		return l.copy()
+	}
+	_l := l.copy()
+	_l.Hub.WithScope(func(scope *sentry.Scope) {
+		scope.SetExtras(l.encode(fields...))
+	})
+	return _l
+}
+
+// WithContext returns a new context with the Sentry hub attached.
+func (l *Logger) WithContext(ctx context.Context) context.Context {
+	if l == nil || l.Hub == nil {
+		return ctx
+	}
+	return sentry.SetHubOnContext(ctx, l.Hub)
+}
+
+func (l *Logger) Clone() core.Logger {
+	return l.copy()
+}
+
+func (l *Logger) Named(name string) core.Logger {
+	if l == nil {
+		return nil
+	}
+	name = strings.ReplaceAll(name, " ", "_")
+	if l.Name != "" {
+		name = l.Name + "." + name
+	}
+	_l := l.copy()
+	_l.Name = name
+	_l.Hub.WithScope(func(scope *sentry.Scope) {
+		scope.SetTag("logger", name)
+	})
+	return _l
+}
+
+func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
+	if l.canLog(zapcore.DebugLevel) {
+		l.getLogger(ctx, fields...).Debug(ctx, msg)
+	} else if l.canBreadcrumb(zapcore.DebugLevel) {
+		l.addBreadcrumb(ctx, zapcore.DebugLevel, msg, fields...)
+	}
+}
+
+func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
+	if l.canLog(zapcore.InfoLevel) {
+		l.getLogger(ctx, fields...).Info(ctx, msg)
+	} else if l.canBreadcrumb(zapcore.InfoLevel) {
+		l.addBreadcrumb(ctx, zapcore.InfoLevel, msg, fields...)
+	}
+}
+
+func (l *Logger) Warning(ctx context.Context, msg string, fields ...zap.Field) {
+	if l.canLog(zapcore.WarnLevel) {
+		l.getLogger(ctx, fields...).Warn(ctx, msg)
+	} else if l.canBreadcrumb(zapcore.WarnLevel) {
+		l.addBreadcrumb(ctx, zapcore.WarnLevel, msg, fields...)
+	}
+}
+
+func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
+	if l.canLog(zapcore.ErrorLevel) {
+		l.getLogger(ctx, fields...).Error(ctx, msg)
+	} else if l.canBreadcrumb(zapcore.ErrorLevel) {
+		l.addBreadcrumb(ctx, zapcore.ErrorLevel, msg, fields...)
+	}
+}
+
+func (l *Logger) Flush(_ context.Context) error {
+	_ = l.Hub.Flush(l.FlushTimeout)
+	return nil
+}
+
+func (l *Logger) SetLevel(level zapcore.Level) {
+	if l == nil {
+		return
+	}
+	l.Level = level
+}
+
+func (l *Logger) SetBreadcrumbLevel(level zapcore.Level) {
+	if l == nil {
+		return
+	}
+	l.BreadcrumbLevel = level
+}
+
+func (l *Logger) copy() *Logger {
+	if l == nil {
+		return nil
+	}
+	_l := *l
+	_l.Hub = l.Hub.Clone()
+	return &_l
+}
+
+func (l *Logger) canBreadcrumb(level zapcore.Level) bool {
+	return level >= l.BreadcrumbLevel
+}
+
+func (l *Logger) canLog(level zapcore.Level) bool {
+	return l.Level <= level
+}
+
+func (l *Logger) addBreadcrumb(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+	hub := sentry.GetHubFromContext(ctx)
+	if hub == nil {
+		hub = l.Hub
+	}
+	hub.AddBreadcrumb(&sentry.Breadcrumb{
+		Level:     l.getSentryLevel(level),
+		Message:   msg,
+		Data:      l.encode(fields...),
+		Timestamp: l.NowFunc(),
+	}, nil)
+}
+
+func (l *Logger) getSentryLevel(level zapcore.Level) sentry.Level {
+	switch level {
+	case zapcore.DebugLevel:
+		return sentry.LevelDebug
+	case zapcore.InfoLevel:
+		return sentry.LevelInfo
+	case zapcore.WarnLevel:
+		return sentry.LevelWarning
+	case zapcore.ErrorLevel:
+		return sentry.LevelError
+	case zapcore.DPanicLevel, zapcore.PanicLevel, zapcore.FatalLevel:
+		return sentry.LevelFatal
+	default:
+		return ""
+	}
+}
+
+func (l *Logger) getLogger(ctx context.Context, fields ...zap.Field) sentry.Logger {
+	if sentry.GetHubFromContext(ctx) == nil {
+		ctx = l.WithContext(ctx)
+	}
+	logger := sentry.NewLogger(ctx)
+	l.attachAttributes(logger, fields...)
+	return logger
+}
+
+func (l *Logger) attachAttributes(logger sentry.Logger, fields ...zap.Field) {
+	if len(fields) == 0 {
+		return
+	}
+	attributeMap := l.encode(fields...)
+	for key, value := range attributeMap {
+		logger.SetAttributes(attribute.String(key, value.(string)))
+	}
+}
+
+func (l *Logger) encode(fields ...zap.Field) map[string]interface{} {
+	data := make(map[string]interface{}, len(fields))
+	var encoder zapcore.Encoder
+	var err error
+	var encoded *buffer.Buffer
+	for _, field := range fields {
+		encoder = zapcore.NewJSONEncoder(l.EncoderConfig)
+		if encoded, err = encoder.EncodeEntry(zapcore.Entry{}, []zap.Field{field}); err != nil {
+			data[field.Key] = fmt.Sprintf("[encoding error]: %s", err.Error())
+			continue
+		}
+		data[field.Key] = encoded.String()
+	}
+	return data
+}
+
+func init() {
+	if os.Getenv(envSentryLogLevel) != "" {
+		if level, err := zapcore.ParseLevel(os.Getenv(envSentryLogLevel)); err == nil {
+			DefaultLevel = level
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_LOG_LEVEL: %s, using default level: %s\n", os.Getenv(envSentryLogLevel), DefaultLevel)
+		}
+	}
+	if os.Getenv(envSentryBreadcrumbLevel) != "" {
+		if level, err := zapcore.ParseLevel(os.Getenv(envSentryBreadcrumbLevel)); err == nil {
+			DefaultBreadcrumbLevel = level
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_BREADCRUMB_LEVEL: %s, using default level: %s\n", os.Getenv(envSentryBreadcrumbLevel), DefaultBreadcrumbLevel)
+		}
+	}
+}
