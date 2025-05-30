@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 	"strings"
 
-	"go-logging/core"
+	"github.com/ensarkovankaya/go-logging/core"
 )
 
 type ctxKeyType string

@@ -1,4 +1,4 @@
-module go-logging
+module github.com/ensarkovankaya/go-logging
 
 go 1.24
 

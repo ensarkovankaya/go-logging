@@ -5,9 +5,9 @@ import (
 	"go.uber.org/zap"
 	"reflect"
 
-	"go-logging/core"
-	"go-logging/integrations/console"
-	"go-logging/integrations/sentry"
+	"github.com/ensarkovankaya/go-logging/core"
+	"github.com/ensarkovankaya/go-logging/integrations/console"
+	"github.com/ensarkovankaya/go-logging/integrations/sentry"
 )
 
 type Field = core.Field

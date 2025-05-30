@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"go-logging/core"
+	"github.com/ensarkovankaya/go-logging/core"
 )
 
 var (

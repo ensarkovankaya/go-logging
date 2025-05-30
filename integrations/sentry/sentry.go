@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"go-logging/core"
+	"github.com/ensarkovankaya/go-logging/core"
 )
 
 type ClientOption = func(*sentry.ClientOptions)

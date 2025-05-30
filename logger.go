@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"go-logging/core"
+	"github.com/ensarkovankaya/go-logging/core"
 )
 
 type Logger struct {
