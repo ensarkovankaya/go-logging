@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	DefaultLevel           = zapcore.InfoLevel
+	DefaultLevel           = zapcore.ErrorLevel
 	DefaultBreadcrumbLevel = zapcore.DebugLevel
 )
 
