@@ -19,7 +19,7 @@ func GetHub() *sentry.Hub {
 }
 
 func Initialize(opts ...ClientOption) *sentry.Hub {
-	if os.Getenv("SENTRY_DSN") != "" {
+	if os.Getenv("SENTRY_DSN") == "" {
 		return nil
 	}
 	options := &sentry.ClientOptions{
