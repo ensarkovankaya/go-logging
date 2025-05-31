@@ -2,11 +2,11 @@ package sentry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/getsentry/sentry-go/attribute"
 	"go.uber.org/zap"
-	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 	"os"
 	"strings"
@@ -36,20 +36,15 @@ type Logger struct {
 	FlushTimeout    time.Duration
 	Name            string
 	NowFunc         func() time.Time
-	EncoderConfig   zapcore.EncoderConfig
 }
 
 func New(opts ...Option) *Logger {
-	if globalHub == nil {
-		return nil
-	}
 	logger := &Logger{
 		Level:           DefaultLevel,
 		BreadcrumbLevel: DefaultBreadcrumbLevel,
 		Hub:             globalHub,
 		FlushTimeout:    FLushTimeout,
 		NowFunc:         time.Now,
-		EncoderConfig:   zap.NewProductionEncoderConfig(),
 	}
 	for _, opt := range opts {
 		opt(logger)
@@ -62,9 +57,6 @@ func (l *Logger) Type() string {
 }
 
 func (l *Logger) With(fields ...core.Field) core.Logger {
-	if l == nil {
-		return nil
-	}
 	if len(fields) == 0 {
 		return l.copy()
 	}
@@ -77,7 +69,7 @@ func (l *Logger) With(fields ...core.Field) core.Logger {
 
 // WithContext returns a new context with the Sentry hub attached.
 func (l *Logger) WithContext(ctx context.Context) context.Context {
-	if l == nil || l.Hub == nil {
+	if l.Hub == nil {
 		return ctx
 	}
 	return sentry.SetHubOnContext(ctx, l.Hub)
@@ -88,9 +80,6 @@ func (l *Logger) Clone() core.Logger {
 }
 
 func (l *Logger) Named(name string) core.Logger {
-	if l == nil {
-		return nil
-	}
 	name = strings.ReplaceAll(name, " ", "_")
 	if l.Name != "" {
 		name = l.Name + "." + name
@@ -136,28 +125,21 @@ func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
 }
 
 func (l *Logger) Flush(_ context.Context) error {
-	_ = l.Hub.Flush(l.FlushTimeout)
+	if ok := l.Hub.Flush(l.FlushTimeout); !ok {
+		return fmt.Errorf("failed to flush Sentry hub within %s", l.FlushTimeout.String())
+	}
 	return nil
 }
 
 func (l *Logger) SetLevel(level zapcore.Level) {
-	if l == nil {
-		return
-	}
 	l.Level = level
 }
 
 func (l *Logger) SetBreadcrumbLevel(level zapcore.Level) {
-	if l == nil {
-		return
-	}
 	l.BreadcrumbLevel = level
 }
 
 func (l *Logger) copy() *Logger {
-	if l == nil {
-		return nil
-	}
 	_l := *l
 	_l.Hub = l.Hub.Clone()
 	return &_l
@@ -215,25 +197,22 @@ func (l *Logger) attachAttributes(logger sentry.Logger, fields ...zap.Field) {
 		return
 	}
 	attributeMap := l.encode(fields...)
+	var err error
+	var decoded []byte
 	for key, value := range attributeMap {
-		logger.SetAttributes(attribute.String(key, value.(string)))
+		if decoded, err = json.Marshal(value); err != nil {
+			decoded = []byte(fmt.Sprintf("[decode error]: %v", err))
+		}
+		logger.SetAttributes(attribute.String(key, string(decoded)))
 	}
 }
 
 func (l *Logger) encode(fields ...zap.Field) map[string]interface{} {
-	data := make(map[string]interface{}, len(fields))
-	var encoder zapcore.Encoder
-	var err error
-	var encoded *buffer.Buffer
+	encoder := zapcore.NewMapObjectEncoder()
 	for _, field := range fields {
-		encoder = zapcore.NewJSONEncoder(l.EncoderConfig)
-		if encoded, err = encoder.EncodeEntry(zapcore.Entry{}, []zap.Field{field}); err != nil {
-			data[field.Key] = fmt.Sprintf("[encoding error]: %s", err.Error())
-			continue
-		}
-		data[field.Key] = encoded.String()
+		field.AddTo(encoder)
 	}
-	return data
+	return encoder.Fields
 }
 
 func init() {

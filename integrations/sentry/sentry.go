@@ -18,10 +18,11 @@ func GetHub() *sentry.Hub {
 	return globalHub
 }
 
+func IsActive() bool {
+	return globalHub != nil
+}
+
 func Initialize(opts ...ClientOption) *sentry.Hub {
-	if os.Getenv("SENTRY_DSN") == "" {
-		return nil
-	}
 	options := &sentry.ClientOptions{
 		Dsn:         os.Getenv("SENTRY_DSN"),
 		ServerName:  os.Getenv("APP_NAME"),
@@ -68,5 +69,7 @@ func init() {
 			FLushTimeout = timeout
 		}
 	}
-	globalHub = Initialize()
+	if os.Getenv("SENTRY_DSN") != "" {
+		globalHub = Initialize()
+	}
 }
