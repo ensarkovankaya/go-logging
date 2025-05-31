@@ -81,6 +81,13 @@ func ReplaceGlobal(l *Logger) {
 	globalLogger = l
 }
 
+func Flush() error {
+	if globalLogger == nil {
+		return nil
+	}
+	return globalLogger.Flush(context.Background())
+}
+
 func init() {
 	logger := &Logger{}
 	logger.AddTransport(console.New())
