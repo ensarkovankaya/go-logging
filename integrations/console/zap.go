@@ -31,6 +31,10 @@ var (
 	envDebug         = "CONSOLE_DEBUG"
 )
 
+func IsActive() bool {
+	return logLevel != LevelDisabled
+}
+
 func Initialize(cfgOptions ...ZapConfigOption) (*zap.Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.Level = zap.NewAtomicLevelAt(logLevel)

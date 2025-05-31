@@ -90,7 +90,11 @@ func Flush() error {
 
 func init() {
 	logger := &Logger{}
-	logger.AddTransport(console.New())
-	logger.AddTransport(sentry.New())
+	if console.IsActive() {
+		logger.AddTransport(console.New())
+	}
+	if sentry.IsActive() {
+		logger.AddTransport(sentry.New())
+	}
 	globalLogger = logger
 }
