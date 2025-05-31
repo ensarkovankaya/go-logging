@@ -41,6 +41,11 @@ func F(key string, value any) Field {
 	return zap.Any(key, value)
 }
 
+// E is a helper function to create a Field for errors
+func E(err error) Field {
+	return zap.NamedError("error", err)
+}
+
 func L(ctx context.Context) *Logger {
 	logger := FromContext(ctx)
 	if logger == nil {
