@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	logLevel   = LevelDebug
+	logLevel   = LevelDisabled
 	callerSkip = 2
 	debug      = false
 )
