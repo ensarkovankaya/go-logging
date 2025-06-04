@@ -17,7 +17,7 @@ import (
 
 var (
 	DefaultLevel           = zapcore.ErrorLevel
-	DefaultBreadcrumbLevel = zapcore.DebugLevel
+	DefaultBreadcrumbLevel = zapcore.InfoLevel
 )
 
 var (
@@ -94,7 +94,7 @@ func (l *Logger) Named(name string) core.Logger {
 
 func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
 	if l.canLog(zapcore.DebugLevel) {
-		l.getLogger(ctx, fields...).Debug(ctx, msg)
+		l.captureEvent(ctx, zapcore.DebugLevel, msg, fields...)
 	} else if l.canBreadcrumb(zapcore.DebugLevel) {
 		l.addBreadcrumb(ctx, zapcore.DebugLevel, msg, fields...)
 	}
@@ -102,7 +102,7 @@ func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
 
 func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
 	if l.canLog(zapcore.InfoLevel) {
-		l.getLogger(ctx, fields...).Info(ctx, msg)
+		l.captureEvent(ctx, zapcore.InfoLevel, msg, fields...)
 	} else if l.canBreadcrumb(zapcore.InfoLevel) {
 		l.addBreadcrumb(ctx, zapcore.InfoLevel, msg, fields...)
 	}
@@ -110,7 +110,7 @@ func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
 
 func (l *Logger) Warning(ctx context.Context, msg string, fields ...zap.Field) {
 	if l.canLog(zapcore.WarnLevel) {
-		l.getLogger(ctx, fields...).Warn(ctx, msg)
+		l.captureEvent(ctx, zapcore.WarnLevel, msg, fields...)
 	} else if l.canBreadcrumb(zapcore.WarnLevel) {
 		l.addBreadcrumb(ctx, zapcore.WarnLevel, msg, fields...)
 	}
@@ -118,7 +118,7 @@ func (l *Logger) Warning(ctx context.Context, msg string, fields ...zap.Field) {
 
 func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
 	if l.canLog(zapcore.ErrorLevel) {
-		l.getLogger(ctx, fields...).Error(ctx, msg)
+		l.captureEvent(ctx, zapcore.ErrorLevel, msg, fields...)
 	} else if l.canBreadcrumb(zapcore.ErrorLevel) {
 		l.addBreadcrumb(ctx, zapcore.ErrorLevel, msg, fields...)
 	}
@@ -154,11 +154,7 @@ func (l *Logger) canLog(level zapcore.Level) bool {
 }
 
 func (l *Logger) addBreadcrumb(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
-	hub := sentry.GetHubFromContext(ctx)
-	if hub == nil {
-		hub = l.Hub
-	}
-	hub.AddBreadcrumb(&sentry.Breadcrumb{
+	l.getHub(ctx).AddBreadcrumb(&sentry.Breadcrumb{
 		Level:     l.getSentryLevel(level),
 		Message:   msg,
 		Data:      l.encode(fields...),
@@ -183,13 +179,13 @@ func (l *Logger) getSentryLevel(level zapcore.Level) sentry.Level {
 	}
 }
 
-func (l *Logger) getLogger(ctx context.Context, fields ...zap.Field) sentry.Logger {
-	if sentry.GetHubFromContext(ctx) == nil {
-		ctx = l.WithContext(ctx)
-	}
-	logger := sentry.NewLogger(ctx)
-	l.attachAttributes(logger, fields...)
-	return logger
+func (l *Logger) captureEvent(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+	l.getHub(ctx).CaptureEvent(&sentry.Event{
+		Level:     l.getSentryLevel(level),
+		Message:   msg,
+		Extra:     l.encode(fields...),
+		Timestamp: l.NowFunc(),
+	})
 }
 
 func (l *Logger) attachAttributes(logger sentry.Logger, fields ...zap.Field) {
@@ -213,6 +209,13 @@ func (l *Logger) encode(fields ...zap.Field) map[string]interface{} {
 		field.AddTo(encoder)
 	}
 	return encoder.Fields
+}
+
+func (l *Logger) getHub(ctx context.Context) *sentry.Hub {
+	if hub := sentry.GetHubFromContext(ctx); hub != nil {
+		return hub
+	}
+	return l.Hub
 }
 
 func init() {

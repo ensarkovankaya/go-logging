@@ -18,6 +18,10 @@ func GetHub() *sentry.Hub {
 	return globalHub
 }
 
+func ReplaceGlobalHub(hub *sentry.Hub) {
+	globalHub = hub
+}
+
 func IsActive() bool {
 	return globalHub != nil
 }
