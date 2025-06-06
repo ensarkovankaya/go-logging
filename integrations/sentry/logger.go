@@ -58,7 +58,7 @@ func New(opts ...Option) *Logger {
 		LogLevel:        defaultLogLevel,
 		EventLevel:      defaultEventLevel,
 		BreadcrumbLevel: defaultBreadcrumbLevel,
-		Hub:             GetGlobalHub(),
+		Hub:             globalHub,
 		FlushTimeout:    FLushTimeout,
 		NowFunc:         time.Now,
 	}
@@ -293,5 +293,5 @@ func init() {
 			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_BREADCRUMB_LEVEL: %s, using default: %s\n", os.Getenv(envSentryBreadcrumbLevel), defaultBreadcrumbLevel.String())
 		}
 	}
-	ReplaceGlobal(New())
+	globalLogger = New()
 }

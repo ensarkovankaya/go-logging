@@ -117,5 +117,5 @@ func (l *Logger) fromContext(ctx context.Context) *zap.Logger {
 }
 
 func init() {
-	ReplaceGlobal(New())
+	globalLogger = New()
 }

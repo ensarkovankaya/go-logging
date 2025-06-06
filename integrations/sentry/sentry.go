@@ -81,9 +81,9 @@ func init() {
 			FLushTimeout = timeout
 		}
 	}
-	if os.Getenv("SENTRY_DSN") != "" {
-		ReplaceGlobalHub(Initialize())
+	if IsActive() {
+		globalHub = Initialize()
 	} else {
-		ReplaceGlobalHub(sentry.CurrentHub())
+		globalHub = sentry.CurrentHub()
 	}
 }
