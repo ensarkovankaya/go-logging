@@ -245,6 +245,9 @@ func (l *Logger) attachAttributes(logger sentry.Logger, fields ...zap.Field) {
 	if len(fields) == 0 {
 		return
 	}
+	if l.Name != "" {
+		logger.SetAttributes(attribute.String("logger", l.Name))
+	}
 	attributeMap := l.encode(fields...)
 	var err error
 	var decoded []byte
