@@ -11,7 +11,7 @@ import (
 )
 
 func TestLogger_LevelDisabled(t *testing.T) {
-	logger := getLogger(t, LevelDisabled)
+	logger := getLogger(t, core.LevelDisabled)
 	ctx := context.Background()
 	logger.Debug(ctx, "debug message", getFields()...)
 	logger.Info(ctx, "info message", getFields()...)
@@ -20,7 +20,7 @@ func TestLogger_LevelDisabled(t *testing.T) {
 }
 
 func TestLogger_LevelDebug(t *testing.T) {
-	logger := getLogger(t, LevelDebug)
+	logger := getLogger(t, core.LevelDebug)
 	ctx := context.Background()
 	logger.Debug(ctx, "debug message", getFields()...)
 	logger.Info(ctx, "info message", getFields()...)
@@ -29,7 +29,7 @@ func TestLogger_LevelDebug(t *testing.T) {
 }
 
 func TestLogger_LevelInfo(t *testing.T) {
-	logger := getLogger(t, LevelInfo)
+	logger := getLogger(t, core.LevelInfo)
 	ctx := context.Background()
 	logger.Debug(ctx, "debug message", getFields()...)
 	logger.Info(ctx, "info message", getFields()...)
@@ -38,7 +38,7 @@ func TestLogger_LevelInfo(t *testing.T) {
 }
 
 func TestLogger_LevelWarning(t *testing.T) {
-	logger := getLogger(t, LevelWarning)
+	logger := getLogger(t, core.LevelWarning)
 	ctx := context.Background()
 	logger.Debug(ctx, "debug message", getFields()...)
 	logger.Info(ctx, "info message", getFields()...)
@@ -47,7 +47,7 @@ func TestLogger_LevelWarning(t *testing.T) {
 }
 
 func TestLogger_LevelError(t *testing.T) {
-	logger := getLogger(t, LevelError)
+	logger := getLogger(t, core.LevelError)
 	ctx := context.Background()
 	logger.Debug(ctx, "debug message", getFields()...)
 	logger.Info(ctx, "info message", getFields()...)
@@ -55,9 +55,9 @@ func TestLogger_LevelError(t *testing.T) {
 	logger.Error(ctx, "error message", getFields()...)
 }
 
-func getLogger(t *testing.T, level Level) *Logger {
+func getLogger(t *testing.T, level core.Level) *Logger {
 	zapLogger, err := Initialize(func(cfg *zap.Config) {
-		cfg.Level = zap.NewAtomicLevelAt(level)
+		cfg.Level = zap.NewAtomicLevelAt(getZapLevel(level))
 	})
 	if err != nil {
 		t.Fatalf("failed to initialize zap: %v", err)

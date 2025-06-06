@@ -12,6 +12,7 @@ import (
 
 type Field = core.Field
 type Logger = core.Logger
+type Level = core.Level
 
 var (
 	globalLogger *batch.Logger

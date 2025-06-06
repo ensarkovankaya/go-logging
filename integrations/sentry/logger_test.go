@@ -13,9 +13,9 @@ import (
 
 type testCase struct {
 	Name                string
-	EventLevel          Level
-	LogLevel            Level
-	BreadcrumbLevel     Level
+	EventLevel          core.Level
+	LogLevel            core.Level
+	BreadcrumbLevel     core.Level
 	ExpectedEvents      int
 	ExpectedLogs        int
 	ExpectedBreadcrumbs int
@@ -83,9 +83,9 @@ func TestLogger_DefaultSettings(t *testing.T) {
 func TestLogger_Debug(t *testing.T) {
 	testLogger(t, testCase{
 		Name:                "Debug",
-		EventLevel:          LevelDebug,
-		LogLevel:            LevelDebug,
-		BreadcrumbLevel:     LevelDebug,
+		EventLevel:          core.LevelDebug,
+		LogLevel:            core.LevelDebug,
+		BreadcrumbLevel:     core.LevelDebug,
 		ExpectedEvents:      4,
 		ExpectedLogs:        4,
 		ExpectedBreadcrumbs: 0,

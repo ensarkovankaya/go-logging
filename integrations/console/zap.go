@@ -6,21 +6,15 @@ import (
 	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
+
+	"github.com/ensarkovankaya/go-logging/core"
 )
 
 type ZapConfigOption = func(cfg *zap.Config)
 type Level = zapcore.Level
 
-const (
-	LevelDebug    Level = zapcore.DebugLevel
-	LevelInfo     Level = zapcore.InfoLevel
-	LevelWarning  Level = zapcore.WarnLevel
-	LevelError    Level = zapcore.ErrorLevel
-	LevelDisabled Level = zapcore.InvalidLevel
-)
-
 var (
-	logLevel   = LevelDisabled
+	logLevel   = core.LevelDisabled
 	callerSkip = 2
 	debug      = false
 )
@@ -32,12 +26,12 @@ var (
 )
 
 func IsActive() bool {
-	return logLevel != LevelDisabled
+	return logLevel != core.LevelDisabled
 }
 
 func Initialize(cfgOptions ...ZapConfigOption) (*zap.Logger, error) {
 	cfg := zap.NewProductionConfig()
-	cfg.Level = zap.NewAtomicLevelAt(logLevel)
+	cfg.Level = zap.NewAtomicLevelAt(getZapLevel(logLevel))
 	cfg.Development = debug
 	options := []zap.Option{
 		zap.AddStacktrace(zapcore.ErrorLevel),
@@ -53,7 +47,7 @@ func Initialize(cfgOptions ...ZapConfigOption) (*zap.Logger, error) {
 
 func init() {
 	if os.Getenv(envLogLevel) != "" {
-		if value, err := zapcore.ParseLevel(os.Getenv(envLogLevel)); err != nil {
+		if value, err := core.ParseLevel(os.Getenv(envLogLevel)); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Invalid CONSOLE_LOG_LEVEL value: %s, using default %d\n", os.Getenv(envLogLevel), logLevel)
 		} else {
 			logLevel = value
@@ -72,5 +66,20 @@ func init() {
 		} else {
 			_, _ = fmt.Fprintf(os.Stderr, "Invalid CONSOLE_DEBUG value: %s, using default %t\n", os.Getenv(envDebug), debug)
 		}
+	}
+}
+
+func getZapLevel(level core.Level) zapcore.Level {
+	switch level {
+	case core.LevelDebug:
+		return zapcore.DebugLevel
+	case core.LevelInfo:
+		return zapcore.InfoLevel
+	case core.LevelWarning:
+		return zapcore.WarnLevel
+	case core.LevelError:
+		return zapcore.ErrorLevel
+	default:
+		return zapcore.InvalidLevel
 	}
 }
