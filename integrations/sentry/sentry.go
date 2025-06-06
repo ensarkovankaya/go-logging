@@ -13,19 +13,6 @@ import (
 type ClientOption = func(*sentry.ClientOptions)
 
 var FLushTimeout = time.Second * 5
-var globalHub *sentry.Hub
-
-func GetGlobalHub() *sentry.Hub {
-	return globalHub
-}
-
-func ReplaceGlobalHub(hub *sentry.Hub) {
-	globalHub = hub
-}
-
-func IsActive() bool {
-	return os.Getenv("SENTRY_DSN") != ""
-}
 
 func Initialize(opts ...ClientOption) *sentry.Hub {
 	options := &sentry.ClientOptions{
@@ -62,8 +49,7 @@ func Initialize(opts ...ClientOption) *sentry.Hub {
 	if err != nil {
 		panic(err)
 	}
-	hub := sentry.CurrentHub()
-	hub.BindClient(client)
+	hub := sentry.NewHub(client, sentry.NewScope())
 	return hub
 }
 
@@ -80,10 +66,5 @@ func init() {
 		} else {
 			FLushTimeout = timeout
 		}
-	}
-	if IsActive() {
-		globalHub = Initialize()
-	} else {
-		globalHub = sentry.CurrentHub()
 	}
 }

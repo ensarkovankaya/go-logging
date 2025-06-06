@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/getsentry/sentry-go"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"sync"
 	"testing"
 	"time"
@@ -15,9 +13,9 @@ import (
 
 type testCase struct {
 	Name                string
-	EventLevel          zapcore.Level
-	LogLevel            zapcore.Level
-	BreadcrumbLevel     zapcore.Level
+	EventLevel          Level
+	LogLevel            Level
+	BreadcrumbLevel     Level
 	ExpectedEvents      int
 	ExpectedLogs        int
 	ExpectedBreadcrumbs int
@@ -85,9 +83,9 @@ func TestLogger_DefaultSettings(t *testing.T) {
 func TestLogger_Debug(t *testing.T) {
 	testLogger(t, testCase{
 		Name:                "Debug",
-		EventLevel:          zap.DebugLevel,
-		LogLevel:            zap.DebugLevel,
-		BreadcrumbLevel:     zap.DebugLevel,
+		EventLevel:          LevelDebug,
+		LogLevel:            LevelDebug,
+		BreadcrumbLevel:     LevelDebug,
 		ExpectedEvents:      4,
 		ExpectedLogs:        4,
 		ExpectedBreadcrumbs: 0,

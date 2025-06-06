@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/getsentry/sentry-go/attribute"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"strings"
 	"time"
@@ -15,9 +14,9 @@ import (
 )
 
 var (
-	defaultLogLevel        = zapcore.InfoLevel
-	defaultEventLevel      = zapcore.ErrorLevel
-	defaultBreadcrumbLevel = zapcore.DebugLevel
+	defaultLogLevel        = LevelInfo
+	defaultEventLevel      = LevelError
+	defaultBreadcrumbLevel = LevelDebug
 )
 
 var (
@@ -31,13 +30,17 @@ const Type = "sentry"
 type Option func(l *Logger)
 
 type Logger struct {
-	LogLevel        zapcore.Level
-	EventLevel      zapcore.Level
-	BreadcrumbLevel zapcore.Level
+	LogLevel        Level
+	EventLevel      Level
+	BreadcrumbLevel Level
 	Hub             *sentry.Hub
 	FlushTimeout    time.Duration
 	Name            string
 	NowFunc         func() time.Time
+}
+
+func IsActive() bool {
+	return os.Getenv("SENTRY_DSN") != ""
 }
 
 func New(opts ...Option) *Logger {
@@ -45,7 +48,7 @@ func New(opts ...Option) *Logger {
 		LogLevel:        defaultLogLevel,
 		EventLevel:      defaultEventLevel,
 		BreadcrumbLevel: defaultBreadcrumbLevel,
-		Hub:             globalHub,
+		Hub:             Initialize(),
 		FlushTimeout:    FLushTimeout,
 		NowFunc:         time.Now,
 	}
@@ -93,46 +96,46 @@ func (l *Logger) Named(name string) core.Logger {
 }
 
 func (l *Logger) Debug(ctx context.Context, msg string, fields ...core.Field) {
-	if l.CanCaptureEvent(zapcore.DebugLevel) {
-		l.CaptureEvent(ctx, zapcore.DebugLevel, msg, fields...)
-	} else if l.CanBreadcrumb(zapcore.DebugLevel) {
-		l.AddBreadcrumb(ctx, zapcore.DebugLevel, msg, fields...)
+	if l.CanCaptureEvent(LevelDebug) {
+		l.CaptureEvent(ctx, LevelDebug, msg, fields...)
+	} else if l.CanBreadcrumb(LevelDebug) {
+		l.AddBreadcrumb(ctx, LevelDebug, msg, fields...)
 	}
-	if l.CanLog(zapcore.DebugLevel) {
-		l.Log(ctx, zapcore.DebugLevel, msg, fields...)
+	if l.CanLog(LevelDebug) {
+		l.Log(ctx, LevelDebug, msg, fields...)
 	}
 }
 
 func (l *Logger) Info(ctx context.Context, msg string, fields ...core.Field) {
-	if l.CanCaptureEvent(zapcore.InfoLevel) {
-		l.CaptureEvent(ctx, zapcore.InfoLevel, msg, fields...)
-	} else if l.CanBreadcrumb(zapcore.InfoLevel) {
-		l.AddBreadcrumb(ctx, zapcore.InfoLevel, msg, fields...)
+	if l.CanCaptureEvent(LevelInfo) {
+		l.CaptureEvent(ctx, LevelInfo, msg, fields...)
+	} else if l.CanBreadcrumb(LevelInfo) {
+		l.AddBreadcrumb(ctx, LevelInfo, msg, fields...)
 	}
-	if l.CanLog(zapcore.InfoLevel) {
-		l.Log(ctx, zapcore.InfoLevel, msg, fields...)
+	if l.CanLog(LevelInfo) {
+		l.Log(ctx, LevelInfo, msg, fields...)
 	}
 }
 
 func (l *Logger) Warning(ctx context.Context, msg string, fields ...core.Field) {
-	if l.CanCaptureEvent(zapcore.WarnLevel) {
-		l.CaptureEvent(ctx, zapcore.WarnLevel, msg, fields...)
-	} else if l.CanBreadcrumb(zapcore.WarnLevel) {
-		l.AddBreadcrumb(ctx, zapcore.WarnLevel, msg, fields...)
+	if l.CanCaptureEvent(LevelWarning) {
+		l.CaptureEvent(ctx, LevelWarning, msg, fields...)
+	} else if l.CanBreadcrumb(LevelWarning) {
+		l.AddBreadcrumb(ctx, LevelWarning, msg, fields...)
 	}
-	if l.CanLog(zapcore.WarnLevel) {
-		l.Log(ctx, zapcore.WarnLevel, msg, fields...)
+	if l.CanLog(LevelWarning) {
+		l.Log(ctx, LevelWarning, msg, fields...)
 	}
 }
 
 func (l *Logger) Error(ctx context.Context, msg string, fields ...core.Field) {
-	if l.CanCaptureEvent(zapcore.ErrorLevel) {
-		l.CaptureEvent(ctx, zapcore.ErrorLevel, msg, fields...)
-	} else if l.CanBreadcrumb(zapcore.ErrorLevel) {
-		l.AddBreadcrumb(ctx, zapcore.ErrorLevel, msg, fields...)
+	if l.CanCaptureEvent(LevelError) {
+		l.CaptureEvent(ctx, LevelError, msg, fields...)
+	} else if l.CanBreadcrumb(LevelError) {
+		l.AddBreadcrumb(ctx, LevelError, msg, fields...)
 	}
-	if l.CanLog(zapcore.ErrorLevel) {
-		l.Log(ctx, zapcore.ErrorLevel, msg, fields...)
+	if l.CanLog(LevelError) {
+		l.Log(ctx, LevelError, msg, fields...)
 	}
 }
 
@@ -143,48 +146,48 @@ func (l *Logger) Flush(_ context.Context) error {
 	return nil
 }
 
-func (l *Logger) SetEventLevel(level zapcore.Level) {
+func (l *Logger) SetEventLevel(level Level) {
 	l.EventLevel = level
 }
 
-func (l *Logger) SetLogLevel(level zapcore.Level) {
+func (l *Logger) SetLogLevel(level Level) {
 	l.LogLevel = level
 }
 
-func (l *Logger) SetBreadcrumbLevel(level zapcore.Level) {
+func (l *Logger) SetBreadcrumbLevel(level Level) {
 	l.BreadcrumbLevel = level
 }
 
-func (l *Logger) Log(ctx context.Context, level zapcore.Level, msg string, fields ...core.Field) {
+func (l *Logger) Log(ctx context.Context, level Level, msg string, fields ...core.Field) {
 	logger := sentry.NewLogger(sentry.SetHubOnContext(ctx, l.getHub(ctx)))
 	l.attachAttributes(logger, fields...)
 	switch level {
-	case zapcore.DebugLevel:
+	case LevelDebug:
 		logger.Debug(ctx, msg)
-	case zapcore.InfoLevel:
+	case LevelInfo:
 		logger.Info(ctx, msg)
-	case zapcore.WarnLevel:
+	case LevelWarning:
 		logger.Warn(ctx, msg)
-	case zapcore.ErrorLevel:
+	case LevelError:
 		logger.Error(ctx, msg)
 	default:
 		return
 	}
 }
 
-func (l *Logger) CanBreadcrumb(level zapcore.Level) bool {
+func (l *Logger) CanBreadcrumb(level Level) bool {
 	return l.BreadcrumbLevel <= level
 }
 
-func (l *Logger) CanCaptureEvent(level zapcore.Level) bool {
+func (l *Logger) CanCaptureEvent(level Level) bool {
 	return l.EventLevel <= level
 }
 
-func (l *Logger) CanLog(level zapcore.Level) bool {
+func (l *Logger) CanLog(level Level) bool {
 	return l.LogLevel <= level
 }
 
-func (l *Logger) AddBreadcrumb(ctx context.Context, level zapcore.Level, msg string, fields ...core.Field) {
+func (l *Logger) AddBreadcrumb(ctx context.Context, level Level, msg string, fields ...core.Field) {
 	l.getHub(ctx).AddBreadcrumb(&sentry.Breadcrumb{
 		Level:     l.getSentryLevel(level),
 		Message:   msg,
@@ -193,7 +196,7 @@ func (l *Logger) AddBreadcrumb(ctx context.Context, level zapcore.Level, msg str
 	}, nil)
 }
 
-func (l *Logger) CaptureEvent(ctx context.Context, level zapcore.Level, msg string, fields ...core.Field) {
+func (l *Logger) CaptureEvent(ctx context.Context, level Level, msg string, fields ...core.Field) {
 	l.getHub(ctx).CaptureEvent(&sentry.Event{
 		Level:     l.getSentryLevel(level),
 		Message:   msg,
@@ -208,18 +211,16 @@ func (l *Logger) copy() *Logger {
 	return &_l
 }
 
-func (l *Logger) getSentryLevel(level zapcore.Level) sentry.Level {
+func (l *Logger) getSentryLevel(level Level) sentry.Level {
 	switch level {
-	case zapcore.DebugLevel:
+	case LevelDebug:
 		return sentry.LevelDebug
-	case zapcore.InfoLevel:
+	case LevelInfo:
 		return sentry.LevelInfo
-	case zapcore.WarnLevel:
+	case LevelWarning:
 		return sentry.LevelWarning
-	case zapcore.ErrorLevel:
+	case LevelError:
 		return sentry.LevelError
-	case zapcore.DPanicLevel, zapcore.PanicLevel, zapcore.FatalLevel:
-		return sentry.LevelFatal
 	default:
 		return ""
 	}
@@ -260,24 +261,24 @@ func (l *Logger) getHub(ctx context.Context) *sentry.Hub {
 
 func init() {
 	if os.Getenv(envSentryEventLevel) != "" {
-		if level, err := zapcore.ParseLevel(os.Getenv(envSentryEventLevel)); err == nil {
+		if level, err := ParseLevel(os.Getenv(envSentryEventLevel)); err == nil {
 			defaultEventLevel = level
 		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_EVENT_LEVEL: %s, using default: %s\n", os.Getenv(envSentryEventLevel), defaultEventLevel.String())
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environemnt value, using default: %s\n", envSentryEventLevel, defaultEventLevel.String())
 		}
 	}
 	if os.Getenv(envSentryLogLevel) != "" {
-		if level, err := zapcore.ParseLevel(os.Getenv(envSentryLogLevel)); err == nil {
+		if level, err := ParseLevel(os.Getenv(envSentryLogLevel)); err == nil {
 			defaultLogLevel = level
 		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_LOG_LEVEL: %s, using default: %s\n", os.Getenv(envSentryLogLevel), defaultLogLevel.String())
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environemnt value, using default: %s\n", envSentryLogLevel, defaultLogLevel.String())
 		}
 	}
 	if os.Getenv(envSentryBreadcrumbLevel) != "" {
-		if level, err := zapcore.ParseLevel(os.Getenv(envSentryBreadcrumbLevel)); err == nil {
+		if level, err := ParseLevel(os.Getenv(envSentryBreadcrumbLevel)); err == nil {
 			defaultBreadcrumbLevel = level
 		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_BREADCRUMB_LEVEL: %s, using default: %s\n", os.Getenv(envSentryBreadcrumbLevel), defaultBreadcrumbLevel.String())
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environemnt value, using default: %s\n", envSentryBreadcrumbLevel, defaultBreadcrumbLevel.String())
 		}
 	}
 }
