@@ -24,6 +24,10 @@ func G() *Logger {
 	return globalLogger
 }
 
+func ReplaceGlobal(logger *Logger) {
+	*globalLogger = *logger
+}
+
 // F is a helper function to create a Field.
 // If the value is a pointer, it dereferences it to get the underlying value.
 // If the value is an error, it uses zap.NamedError to log it with the provided key.
@@ -77,10 +81,6 @@ func WithContext(ctx context.Context, logger *Logger) context.Context {
 	return context.WithValue(ctx, CtxKey, logger)
 }
 
-func ReplaceGlobal(l *Logger) {
-	globalLogger = l
-}
-
 func Flush() error {
 	if globalLogger == nil {
 		return nil
@@ -91,10 +91,10 @@ func Flush() error {
 func init() {
 	logger := &Logger{}
 	if console.IsActive() {
-		logger.AddTransport(console.New())
+		logger.AddTransport(console.G())
 	}
 	if sentry.IsActive() {
-		logger.AddTransport(sentry.New())
+		logger.AddTransport(sentry.G())
 	}
 	globalLogger = logger
 }

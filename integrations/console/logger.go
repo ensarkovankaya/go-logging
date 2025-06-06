@@ -15,6 +15,18 @@ const CtxKey ctxKeyType = "__console_logger__"
 
 const Type = "console"
 
+var globalLogger *Logger
+
+// G returns the global logger instance.
+func G() *Logger {
+	return globalLogger
+}
+
+// ReplaceGlobal replaces the global logger with the provided logger.
+func ReplaceGlobal(logger *Logger) {
+	globalLogger = logger
+}
+
 type Option func(l *Logger)
 
 type Logger struct {
@@ -102,4 +114,8 @@ func (l *Logger) fromContext(ctx context.Context) *zap.Logger {
 		return l.Transport
 	}
 	return transport
+}
+
+func init() {
+	ReplaceGlobal(New())
 }

@@ -1,6 +1,7 @@
 package sentry
 
 import (
+	"fmt"
 	"github.com/getsentry/sentry-go"
 	"os"
 	"strconv"
@@ -14,7 +15,7 @@ type ClientOption = func(*sentry.ClientOptions)
 var FLushTimeout = time.Second * 5
 var globalHub *sentry.Hub
 
-func GetHub() *sentry.Hub {
+func GetGlobalHub() *sentry.Hub {
 	return globalHub
 }
 
@@ -23,7 +24,7 @@ func ReplaceGlobalHub(hub *sentry.Hub) {
 }
 
 func IsActive() bool {
-	return globalHub != nil
+	return os.Getenv("SENTRY_DSN") != ""
 }
 
 func Initialize(opts ...ClientOption) *sentry.Hub {
@@ -35,7 +36,7 @@ func Initialize(opts ...ClientOption) *sentry.Hub {
 	options.EnableLogs, _ = core.ParseBool("SENTRY_ENABLE_LOGS", true, false)
 	options.Debug, _ = core.ParseBool("SENTRY_DEBUG", false, false)
 	options.AttachStacktrace, _ = core.ParseBool("SENTRY_ATTACH_STACKTRACE", true, false)
-	options.EnableTracing, _ = core.ParseBool("SENTRY_ENABLE_TRACING", false, false)
+	options.EnableTracing, _ = core.ParseBool("SENTRY_ENABLE_TRACING", true, false)
 	if os.Getenv("SENTRY_SAMPLE_RATE") != "" {
 		rate, err := strconv.ParseFloat(os.Getenv("SENTRY_SAMPLE_RATE"), 64)
 		if err != nil {
@@ -70,10 +71,19 @@ func init() {
 	if os.Getenv("SENTRY_FLUSH_TIMEOUT") != "" {
 		timeout, err := time.ParseDuration(os.Getenv("SENTRY_FLUSH_TIMEOUT"))
 		if err != nil {
+			_, _ = fmt.Fprintf(
+				os.Stderr,
+				"Invalid SENTRY_FLUSH_TIMEOUT value: %s, using default %v\n",
+				os.Getenv("SENTRY_FLUSH_TIMEOUT"),
+				FLushTimeout,
+			)
+		} else {
 			FLushTimeout = timeout
 		}
 	}
 	if os.Getenv("SENTRY_DSN") != "" {
-		globalHub = Initialize()
+		ReplaceGlobalHub(Initialize())
+	} else {
+		ReplaceGlobalHub(sentry.CurrentHub())
 	}
 }
