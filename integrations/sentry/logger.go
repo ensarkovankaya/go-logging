@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	defaultLogLevel        = LevelWarning
+	defaultLogLevel        = LevelInfo
 	defaultEventLevel      = LevelError
 	defaultBreadcrumbLevel = LevelDebug
 )
