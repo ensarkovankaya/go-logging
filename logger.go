@@ -1,99 +1,88 @@
-package go_logging
+package logging
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/ensarkovankaya/go-logging/core"
+	"github.com/ensarkovankaya/go-logging/integrations/batch"
+	"github.com/ensarkovankaya/go-logging/integrations/console"
+	"github.com/ensarkovankaya/go-logging/integrations/sentry"
 )
 
-type Logger struct {
-	Transports []core.Logger
+type Field = core.Field
+type Logger = core.Logger
+
+var (
+	globalLogger *batch.Logger
+)
+
+var (
+	autoConfigure bool
+	autoConfigEnv = "LOGGER_AUTO_CONFIG"
+)
+
+// G returns the global logger instance.
+func G() *batch.Logger {
+	return globalLogger
 }
 
-func (l *Logger) Named(name string) *Logger {
-	_l := &Logger{
-		Transports: make([]core.Logger, 0, len(l.Transports)),
-	}
-	for _, transport := range l.Transports {
-		_l.Transports = append(_l.Transports, transport.Named(name))
-	}
-	return _l
+func ReplaceGlobal(logger *batch.Logger) {
+	globalLogger = logger
 }
 
-func (l *Logger) WithContext(ctx context.Context) context.Context {
-	for _, transport := range l.Transports {
-		ctx = transport.WithContext(ctx)
-	}
-	return ctx
+// F exports core.F
+func F(key string, value any) Field {
+	return core.F(key, value)
 }
 
-func (l *Logger) With(fields ...Field) *Logger {
-	_t := &Logger{
-		Transports: make([]core.Logger, 0, len(l.Transports)),
-	}
-	for _, transport := range l.Transports {
-		_t.Transports = append(_t.Transports, transport.With(fields...))
-	}
-	return _t
+// E exports core.E
+func E(err error) Field {
+	return core.E(err)
 }
 
-func (l *Logger) Clone() *Logger {
-	_t := &Logger{
-		Transports: make([]core.Logger, 0, len(l.Transports)),
+// L returns the logger from the context.
+func L(ctx context.Context) core.Logger {
+	logger := FromContext(ctx)
+	if logger == nil {
+		return globalLogger
 	}
-	for _, transport := range l.Transports {
-		_t.Transports = append(_t.Transports, transport.Clone())
-	}
-	return _t
+	return logger
 }
 
-func (l *Logger) Debug(ctx context.Context, msg string, fields ...Field) {
-	for _, transport := range l.Transports {
-		transport.Debug(ctx, msg, fields...)
-	}
-}
-
-func (l *Logger) Info(ctx context.Context, msg string, fields ...Field) {
-	for _, transport := range l.Transports {
-		transport.Info(ctx, msg, fields...)
-	}
-}
-
-func (l *Logger) Warning(ctx context.Context, msg string, fields ...Field) {
-	for _, transport := range l.Transports {
-		transport.Warning(ctx, msg, fields...)
-	}
-}
-
-func (l *Logger) Error(ctx context.Context, msg string, fields ...Field) {
-	for _, transport := range l.Transports {
-		transport.Error(ctx, msg, fields...)
+// Named returns a function that creates a named logger from the context.
+// Example usage:
+//
+//	package integration
+//
+//	logger := logging.Named("integration")
+//	func someFunc(ctx context.Context) {
+//	    logger(ctx).Info(ctx, "This is a log message")
+//		// this will log messages with the name "integration"
+//		// {"logger":"integration","level":"info","msg":"This is a log message"}
+//	}
+func Named(name string) func(ctx context.Context) core.Logger {
+	return func(ctx context.Context) core.Logger {
+		return L(ctx).Named(name)
 	}
 }
 
-func (l *Logger) AddTransport(transport core.Logger) {
-	if transport != nil {
-		l.Transports = append(l.Transports, transport)
+func init() {
+	var err error
+	globalLogger = batch.New()
+	if autoConfigure, err = core.ParseBool(autoConfigEnv, true, false); err != nil {
+		panic(fmt.Sprintf("Failed to parse %v: %v\n", autoConfigEnv, err))
+	}
+	if autoConfigure {
+		ConfigureGlobalLogger()
 	}
 }
 
-func (l *Logger) GetTransport(_type string) core.Logger {
-	for _, transport := range l.Transports {
-		if transport.Type() == _type {
-			return transport
-		}
+func ConfigureGlobalLogger() {
+	if console.IsActive() {
+		globalLogger.AddIntegration(console.New())
 	}
-	return nil
-
-}
-
-func (l *Logger) Flush(ctx context.Context) error {
-	errs := make([]error, 0)
-	for _, transport := range l.Transports {
-		if err := transport.Flush(ctx); err != nil {
-			errs = append(errs, err)
-		}
+	if sentry.IsActive() {
+		globalLogger.AddIntegration(sentry.New())
 	}
-	return errors.Join(errs...)
 }

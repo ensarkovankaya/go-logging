@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/getsentry/sentry-go/attribute"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
 	"strings"
@@ -27,21 +26,9 @@ var (
 	envSentryBreadcrumbLevel = "SENTRY_BREADCRUMB_LEVEL"
 )
 
-var globalLogger *Logger
-
 const Type = "sentry"
 
 type Option func(l *Logger)
-
-// G returns the global logger instance.
-func G() *Logger {
-	return globalLogger
-}
-
-// ReplaceGlobal replaces the global logger with the provided logger.
-func ReplaceGlobal(logger *Logger) {
-	globalLogger = logger
-}
 
 type Logger struct {
 	LogLevel        zapcore.Level
@@ -78,16 +65,13 @@ func (l *Logger) With(fields ...core.Field) core.Logger {
 	}
 	_l := l.copy()
 	_l.Hub.WithScope(func(scope *sentry.Scope) {
-		scope.SetExtras(l.encode(fields...))
+		scope.SetExtras(l.transform(fields...))
 	})
 	return _l
 }
 
 // WithContext returns a new context with the Sentry hub attached.
 func (l *Logger) WithContext(ctx context.Context) context.Context {
-	if l.Hub == nil {
-		return ctx
-	}
 	return sentry.SetHubOnContext(ctx, l.Hub)
 }
 
@@ -108,7 +92,7 @@ func (l *Logger) Named(name string) core.Logger {
 	return _l
 }
 
-func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) Debug(ctx context.Context, msg string, fields ...core.Field) {
 	if l.CanCaptureEvent(zapcore.DebugLevel) {
 		l.CaptureEvent(ctx, zapcore.DebugLevel, msg, fields...)
 	} else if l.CanBreadcrumb(zapcore.DebugLevel) {
@@ -119,7 +103,7 @@ func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
 	}
 }
 
-func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) Info(ctx context.Context, msg string, fields ...core.Field) {
 	if l.CanCaptureEvent(zapcore.InfoLevel) {
 		l.CaptureEvent(ctx, zapcore.InfoLevel, msg, fields...)
 	} else if l.CanBreadcrumb(zapcore.InfoLevel) {
@@ -130,7 +114,7 @@ func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
 	}
 }
 
-func (l *Logger) Warning(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) Warning(ctx context.Context, msg string, fields ...core.Field) {
 	if l.CanCaptureEvent(zapcore.WarnLevel) {
 		l.CaptureEvent(ctx, zapcore.WarnLevel, msg, fields...)
 	} else if l.CanBreadcrumb(zapcore.WarnLevel) {
@@ -141,7 +125,7 @@ func (l *Logger) Warning(ctx context.Context, msg string, fields ...zap.Field) {
 	}
 }
 
-func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) Error(ctx context.Context, msg string, fields ...core.Field) {
 	if l.CanCaptureEvent(zapcore.ErrorLevel) {
 		l.CaptureEvent(ctx, zapcore.ErrorLevel, msg, fields...)
 	} else if l.CanBreadcrumb(zapcore.ErrorLevel) {
@@ -171,7 +155,7 @@ func (l *Logger) SetBreadcrumbLevel(level zapcore.Level) {
 	l.BreadcrumbLevel = level
 }
 
-func (l *Logger) Log(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+func (l *Logger) Log(ctx context.Context, level zapcore.Level, msg string, fields ...core.Field) {
 	logger := sentry.NewLogger(sentry.SetHubOnContext(ctx, l.getHub(ctx)))
 	l.attachAttributes(logger, fields...)
 	switch level {
@@ -200,20 +184,20 @@ func (l *Logger) CanLog(level zapcore.Level) bool {
 	return l.LogLevel <= level
 }
 
-func (l *Logger) AddBreadcrumb(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+func (l *Logger) AddBreadcrumb(ctx context.Context, level zapcore.Level, msg string, fields ...core.Field) {
 	l.getHub(ctx).AddBreadcrumb(&sentry.Breadcrumb{
 		Level:     l.getSentryLevel(level),
 		Message:   msg,
-		Data:      l.encode(fields...),
+		Data:      l.transform(fields...),
 		Timestamp: l.NowFunc(),
 	}, nil)
 }
 
-func (l *Logger) CaptureEvent(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+func (l *Logger) CaptureEvent(ctx context.Context, level zapcore.Level, msg string, fields ...core.Field) {
 	l.getHub(ctx).CaptureEvent(&sentry.Event{
 		Level:     l.getSentryLevel(level),
 		Message:   msg,
-		Extra:     l.encode(fields...),
+		Extra:     l.transform(fields...),
 		Timestamp: l.NowFunc(),
 	})
 }
@@ -241,14 +225,14 @@ func (l *Logger) getSentryLevel(level zapcore.Level) sentry.Level {
 	}
 }
 
-func (l *Logger) attachAttributes(logger sentry.Logger, fields ...zap.Field) {
+func (l *Logger) attachAttributes(logger sentry.Logger, fields ...core.Field) {
 	if len(fields) == 0 {
 		return
 	}
 	if l.Name != "" {
 		logger.SetAttributes(attribute.String("logger", l.Name))
 	}
-	attributeMap := l.encode(fields...)
+	attributeMap := l.transform(fields...)
 	var err error
 	var decoded []byte
 	for key, value := range attributeMap {
@@ -259,12 +243,12 @@ func (l *Logger) attachAttributes(logger sentry.Logger, fields ...zap.Field) {
 	}
 }
 
-func (l *Logger) encode(fields ...zap.Field) map[string]interface{} {
-	encoder := zapcore.NewMapObjectEncoder()
+func (l *Logger) transform(fields ...core.Field) map[string]interface{} {
+	transformed := make(map[string]interface{}, len(fields))
 	for _, field := range fields {
-		field.AddTo(encoder)
+		transformed[field.Key] = field.Value
 	}
-	return encoder.Fields
+	return transformed
 }
 
 func (l *Logger) getHub(ctx context.Context) *sentry.Hub {
@@ -296,5 +280,4 @@ func init() {
 			_, _ = fmt.Fprintf(os.Stderr, "Invalid SENTRY_BREADCRUMB_LEVEL: %s, using default: %s\n", os.Getenv(envSentryBreadcrumbLevel), defaultBreadcrumbLevel.String())
 		}
 	}
-	globalLogger = New()
 }

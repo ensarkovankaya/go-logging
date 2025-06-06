@@ -6,6 +6,8 @@ import (
 	"go.uber.org/zap"
 	"testing"
 	"time"
+
+	"github.com/ensarkovankaya/go-logging/core"
 )
 
 func TestLogger_LevelDisabled(t *testing.T) {
@@ -69,7 +71,7 @@ func getLogger(t *testing.T, level Level) *Logger {
 	return logger
 }
 
-func getFields() []zap.Field {
+func getFields() []core.Field {
 	type A struct {
 		F1 string `json:"f_1"`
 		F2 int
@@ -79,21 +81,21 @@ func getFields() []zap.Field {
 	timestamp := time.Date(2023, 10, 1, 12, 0, 0, 0, zone)
 	twoMinutesTwentyThree := time.Minute*2 + time.Second*23
 
-	return []zap.Field{
-		zap.Any("str", "value"),
-		zap.Any("int", 1),
-		zap.Any("float", 1.8),
-		zap.Any("bool", true),
-		zap.Any("nil", nil),
-		zap.Any("struct", A{F1: "test", F2: 123}),
-		zap.Any("struct_pointer", &A{F1: "test", F2: 123}),
-		zap.Any("slice", []string{"a", "b", "c"}),
-		zap.Any("map", map[string]int{"a": 1, "b": 2}),
-		zap.Any("error", err),
-		zap.Any("error_pointer", &err),
-		zap.Any("context", context.Background()),
-		zap.Any("context_with_value", context.WithValue(context.Background(), "key", "value")),
-		zap.Any("timestamp", timestamp),
-		zap.Any("duration", twoMinutesTwentyThree),
+	return []core.Field{
+		core.F("str", "value"),
+		core.F("int", 1),
+		core.F("float", 1.8),
+		core.F("bool", true),
+		core.F("nil", nil),
+		core.F("struct", A{F1: "test", F2: 123}),
+		core.F("struct_pointer", &A{F1: "test", F2: 123}),
+		core.F("slice", []string{"a", "b", "c"}),
+		core.F("map", map[string]int{"a": 1, "b": 2}),
+		core.F("error", err),
+		core.F("error_pointer", &err),
+		core.F("context", context.Background()),
+		core.F("context_with_value", context.WithValue(context.Background(), "key", "value")),
+		core.F("timestamp", timestamp),
+		core.F("duration", twoMinutesTwentyThree),
 	}
 }
