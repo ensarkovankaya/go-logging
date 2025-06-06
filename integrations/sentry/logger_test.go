@@ -11,70 +11,112 @@ import (
 	"time"
 )
 
+type testCase struct {
+	Name                string
+	EventLevel          zapcore.Level
+	LogLevel            zapcore.Level
+	BreadcrumbLevel     zapcore.Level
+	ExpectedEvents      int
+	ExpectedLogs        int
+	ExpectedBreadcrumbs int
+}
+
 type MockTransport struct {
-	T         *testing.T
-	mu        *sync.Mutex
-	logCount  int
-	events    []*sentry.Event
-	lastEvent *sentry.Event
+	T               *testing.T
+	mu              *sync.Mutex
+	EventCount      int
+	LogCount        int
+	BreadcrumbCount int
+	events          []*sentry.Event
+	lastEvent       *sentry.Event
 }
 
 func (t *MockTransport) Configure(options sentry.ClientOptions) {
-	t.T.Logf("Configure: %+v", options)
+	t.T.Logf("[MockTransport] Configure: %+v", options)
 }
+
 func (t *MockTransport) SendEvent(event *sentry.Event) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.T.Logf("SendEvent: %+v", event)
+	t.T.Logf("[MockTransport] SendEvent: %+v", event)
 	t.events = append(t.events, event)
-	t.logCount += len(event.Logs)
+	if event.Type == "" {
+		t.EventCount++
+	}
+	t.LogCount += len(event.Logs)
+	t.BreadcrumbCount += len(event.Breadcrumbs)
 	t.lastEvent = event
 }
+
 func (t *MockTransport) Flush(duration time.Duration) bool {
-	t.T.Logf("Flush: %+v", duration)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.T.Logf("[MockTransport] Flush: %+v", duration)
 	return true
 }
+
 func (t *MockTransport) Events() []*sentry.Event {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.T.Logf("Events: %+v", t.events)
+	t.T.Logf("[MockTransport] Events: %v", len(t.events))
 	return t.events
 }
+
 func (t *MockTransport) Close() {
-	t.T.Logf("Close")
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.T.Logf("[MockTransport] Close")
+}
+
+func TestLogger_DefaultSettings(t *testing.T) {
+	testLogger(t, testCase{
+		Name:                "Debug",
+		EventLevel:          defaultEventLevel,
+		LogLevel:            defaultLogLevel,
+		BreadcrumbLevel:     defaultBreadcrumbLevel,
+		ExpectedEvents:      1,
+		ExpectedLogs:        3,
+		ExpectedBreadcrumbs: 3,
+	})
 }
 
 func TestLogger_Debug(t *testing.T) {
-	testLogger(t, zap.DebugLevel, 4)
-}
-
-func TestLogger_Info(t *testing.T) {
-	testLogger(t, zap.InfoLevel, 3)
-}
-
-func TestLogger_Warning(t *testing.T) {
-	testLogger(t, zap.WarnLevel, 2)
-}
-
-func TestLogger_Error(t *testing.T) {
-	testLogger(t, zap.ErrorLevel, 1)
-}
-
-func testLogger(t *testing.T, level zapcore.Level, expectedLogs int) {
-	ctx := context.Background()
-	logger, transport := getLoggerForTest(t, func(l *Logger) {
-		l.Level = level
+	testLogger(t, testCase{
+		Name:                "Debug",
+		EventLevel:          zap.DebugLevel,
+		LogLevel:            zap.DebugLevel,
+		BreadcrumbLevel:     zap.DebugLevel,
+		ExpectedEvents:      4,
+		ExpectedLogs:        4,
+		ExpectedBreadcrumbs: 0,
 	})
-	logger.Debug(ctx, "Debug message", getFields()...)
-	logger.Info(ctx, "Info message", getFields()...)
-	logger.Warning(ctx, "Warning message", getFields()...)
-	logger.Error(ctx, "Error message", getFields()...)
-	if err := logger.Flush(ctx); err != nil {
-		t.Errorf("Flush failed: %v", err)
-	}
-	if transport.logCount != expectedLogs {
-		t.Errorf("Expected %d logs, got %d", expectedLogs, transport.logCount)
-	}
+}
+
+func testLogger(t *testing.T, _case testCase) {
+	t.Run(_case.Name, func(t *testing.T) {
+		ctx := context.Background()
+		logger, transport := getLoggerForTest(t, func(l *Logger) {
+			l.LogLevel = _case.LogLevel
+			l.EventLevel = _case.EventLevel
+			l.BreadcrumbLevel = _case.BreadcrumbLevel
+		})
+		logger.Debug(ctx, "Debug message", getFields()...)
+		logger.Info(ctx, "Info message", getFields()...)
+		logger.Warning(ctx, "Warning message", getFields()...)
+		logger.Error(ctx, "Error message", getFields()...)
+		if err := logger.Flush(ctx); err != nil {
+			t.Errorf("Flush failed: %v", err)
+		}
+		if transport.EventCount != _case.ExpectedEvents {
+			t.Errorf("Expected %d event, got %d", _case.ExpectedEvents, transport.EventCount)
+		}
+		if transport.LogCount != _case.ExpectedLogs {
+			t.Errorf("Expected %d logs, got %d", _case.ExpectedLogs, transport.LogCount)
+		}
+		if transport.BreadcrumbCount != _case.ExpectedBreadcrumbs {
+			t.Errorf("Expected %d breadcrumbs, got %d", _case.ExpectedBreadcrumbs, transport.BreadcrumbCount)
+		}
+	})
 }
 
 func getLoggerForTest(t *testing.T, opts ...Option) (*Logger, *MockTransport) {
