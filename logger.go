@@ -14,6 +14,14 @@ type Field = core.Field
 type Logger = core.Logger
 type Level = core.Level
 
+const (
+	LevelDebug    = core.LevelDebug
+	LevelInfo     = core.LevelInfo
+	LevelWarning  = core.LevelWarning
+	LevelError    = core.LevelError
+	LevelDisabled = core.LevelDisabled
+)
+
 var (
 	globalLogger *batch.Logger
 )
