@@ -79,15 +79,15 @@ func Named(name string) func(ctx context.Context) core.Logger {
 func init() {
 	var err error
 	globalLogger = batch.New()
-	if autoConfigure, err = core.ParseBool(autoConfigEnv, true, false); err != nil {
+	if autoConfigure, err = core.ParseBool(autoConfigEnv, false, false); err != nil {
 		panic(fmt.Sprintf("Failed to parse %v: %v\n", autoConfigEnv, err))
 	}
 	if autoConfigure {
-		ConfigureGlobalLogger()
+		AutoConfigure()
 	}
 }
 
-func ConfigureGlobalLogger() {
+func AutoConfigure() {
 	if console.IsActive() {
 		globalLogger.AddIntegration(console.New())
 	}
