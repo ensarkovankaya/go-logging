@@ -30,7 +30,9 @@ func New(filePath string, options ...Option) *Logger {
 		logger.File = file
 	}
 
-	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	cfg := zap.NewProductionEncoderConfig()
+	cfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoder := zapcore.NewJSONEncoder(cfg)
 	writer := zapcore.AddSync(logger.File)
 	core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
 	logger.Transport = zap.New(core)
