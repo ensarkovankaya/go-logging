@@ -7,9 +7,10 @@ import (
 	"fmt"
 	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	"github.com/ensarkovankaya/go-logging"
 	"sync"
 	"time"
+
+	"github.com/ensarkovankaya/go-logging"
 )
 
 var (

@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ensarkovankaya/go-logging"
 	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/ensarkovankaya/go-logging"
 )
 
 const DefaultRequestIDHeader = "X-Request-ID"

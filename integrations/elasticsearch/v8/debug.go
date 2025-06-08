@@ -2,6 +2,7 @@ package elastic
 
 import (
 	"context"
+
 	"github.com/ensarkovankaya/go-logging/core"
 )
 
