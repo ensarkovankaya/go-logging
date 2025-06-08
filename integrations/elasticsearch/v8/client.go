@@ -15,7 +15,7 @@ func Initialize(options ...ClientOption) (*elasticsearch8.Client, error) {
 	if cert != "" {
 		if strings.HasPrefix(cert, "-----BEGIN CERTIFICATE-----") {
 			cfg.CACert = []byte(cert)
-		} else if strings.HasSuffix(cert, ".crt") {
+		} else if strings.HasSuffix(cert, ".crt") || strings.HasSuffix(cert, ".pem") {
 			certData, err := os.ReadFile(cert)
 			if err != nil {
 				return nil, err
