@@ -9,14 +9,14 @@ import (
 
 const Type = "batch"
 
-// Logger aggregates multiple core.Logger instances.
+// Logger aggregates multiple core.Interface instances.
 type Logger struct {
-	integrations []core.Logger
+	integrations []core.Interface
 }
 
 func New() *Logger {
 	return &Logger{
-		integrations: make([]core.Logger, 0),
+		integrations: make([]core.Interface, 0),
 	}
 }
 
@@ -24,9 +24,9 @@ func (l *Logger) Type() string {
 	return Type
 }
 
-func (l *Logger) Named(name string) core.Logger {
+func (l *Logger) Named(name string) core.Interface {
 	_l := &Logger{
-		integrations: make([]core.Logger, 0, len(l.integrations)),
+		integrations: make([]core.Interface, 0, len(l.integrations)),
 	}
 	for _, integration := range l.integrations {
 		_l.integrations = append(_l.integrations, integration.Named(name))
@@ -41,9 +41,9 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (l *Logger) With(fields ...core.Field) core.Logger {
+func (l *Logger) With(fields ...core.Field) core.Interface {
 	_t := &Logger{
-		integrations: make([]core.Logger, 0, len(l.integrations)),
+		integrations: make([]core.Interface, 0, len(l.integrations)),
 	}
 	for _, integration := range l.integrations {
 		_t.integrations = append(_t.integrations, integration.With(fields...))
@@ -51,9 +51,9 @@ func (l *Logger) With(fields ...core.Field) core.Logger {
 	return _t
 }
 
-func (l *Logger) Clone() core.Logger {
+func (l *Logger) Clone() core.Interface {
 	_t := &Logger{
-		integrations: make([]core.Logger, 0, len(l.integrations)),
+		integrations: make([]core.Interface, 0, len(l.integrations)),
 	}
 	for _, integration := range l.integrations {
 		_t.integrations = append(_t.integrations, integration.Clone())
@@ -85,13 +85,13 @@ func (l *Logger) Error(ctx context.Context, msg string, fields ...core.Field) {
 	}
 }
 
-func (l *Logger) AddIntegration(integration core.Logger) {
+func (l *Logger) AddIntegration(integration core.Interface) {
 	if integration != nil {
 		l.integrations = append(l.integrations, integration)
 	}
 }
 
-func (l *Logger) ReplaceIntegration(_type string, integration core.Logger) {
+func (l *Logger) ReplaceIntegration(_type string, integration core.Interface) {
 	for i, existing := range l.integrations {
 		if existing.Type() == _type {
 			l.integrations[i] = integration
@@ -101,7 +101,7 @@ func (l *Logger) ReplaceIntegration(_type string, integration core.Logger) {
 	l.AddIntegration(integration)
 }
 
-func (l *Logger) GetIntegration(_type string) core.Logger {
+func (l *Logger) GetIntegration(_type string) core.Interface {
 	for _, integration := range l.integrations {
 		if integration.Type() == _type {
 			return integration

@@ -4,12 +4,12 @@ import (
 	"context"
 )
 
-type Logger interface {
+type Interface interface {
 	Type() string
-	Named(string) Logger
-	Clone() Logger
+	Named(string) Interface
+	Clone() Interface
 	WithContext(context.Context) context.Context
-	With(...Field) Logger
+	With(...Field) Interface
 	Debug(ctx context.Context, msg string, fields ...Field)
 	Info(ctx context.Context, msg string, fields ...Field)
 	Warning(ctx context.Context, msg string, fields ...Field)

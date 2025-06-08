@@ -62,7 +62,7 @@ func (l *Logger) Type() string {
 	return Type
 }
 
-func (l *Logger) With(fields ...core.Field) core.Logger {
+func (l *Logger) With(fields ...core.Field) core.Interface {
 	if len(fields) == 0 {
 		return l.copy()
 	}
@@ -78,11 +78,11 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 	return sentry.SetHubOnContext(ctx, l.Hub)
 }
 
-func (l *Logger) Clone() core.Logger {
+func (l *Logger) Clone() core.Interface {
 	return l.copy()
 }
 
-func (l *Logger) Named(name string) core.Logger {
+func (l *Logger) Named(name string) core.Interface {
 	name = strings.ReplaceAll(name, " ", "_")
 	if l.Name != "" {
 		name = l.Name + "." + name

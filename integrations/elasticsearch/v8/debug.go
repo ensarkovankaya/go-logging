@@ -13,11 +13,11 @@ func (l *noopLogger) Type() string {
 	return "noop"
 }
 
-func (l *noopLogger) Named(_ string) core.Logger {
+func (l *noopLogger) Named(_ string) core.Interface {
 	return l
 }
 
-func (l *noopLogger) Clone() core.Logger {
+func (l *noopLogger) Clone() core.Interface {
 	return l
 }
 
@@ -25,7 +25,7 @@ func (l *noopLogger) WithContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-func (l *noopLogger) With(_ ...core.Field) core.Logger {
+func (l *noopLogger) With(_ ...core.Field) core.Interface {
 	return l
 }
 

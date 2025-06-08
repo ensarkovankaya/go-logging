@@ -23,13 +23,13 @@ var DefaultLogIDBuilder LogIDBuilder = func(req *http.Request) string {
 
 type Transport struct {
 	Serializer
-	Logger           core.Logger
+	Logger           core.Interface
 	Transport        http.RoundTripper
 	RequestIDBuilder LogIDBuilder
 	NowFunc          func() time.Time
 }
 
-func NewTransport(logger core.Logger, options ...Option) *Transport {
+func NewTransport(logger core.Interface, options ...Option) *Transport {
 	transport := &Transport{
 		Serializer:       Serializer{},
 		Logger:           logger,

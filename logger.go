@@ -11,7 +11,7 @@ import (
 )
 
 type Field = core.Field
-type Logger = core.Logger
+type Interface = core.Interface
 type Level = core.Level
 
 const (
@@ -51,7 +51,7 @@ func E(err error) Field {
 }
 
 // L returns the logger from the context.
-func L(ctx context.Context) core.Logger {
+func L(ctx context.Context) core.Interface {
 	logger := FromContext(ctx)
 	if logger == nil {
 		return globalLogger
@@ -70,8 +70,8 @@ func L(ctx context.Context) core.Logger {
 //		// this will log messages with the name "integration"
 //		// {"logger":"integration","level":"info","msg":"This is a log message"}
 //	}
-func Named(name string) func(ctx context.Context) core.Logger {
-	return func(ctx context.Context) core.Logger {
+func Named(name string) func(ctx context.Context) core.Interface {
+	return func(ctx context.Context) core.Interface {
 		return L(ctx).Named(name)
 	}
 }

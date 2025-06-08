@@ -39,7 +39,7 @@ func (l *Logger) Type() string {
 	return Type
 }
 
-func (l *Logger) With(fields ...core.Field) core.Logger {
+func (l *Logger) With(fields ...core.Field) core.Interface {
 	l.Transport = l.Transport.With(l.serialize(fields...)...)
 	return l
 }
@@ -48,13 +48,13 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 	return context.WithValue(ctx, CtxKey, l.Transport)
 }
 
-func (l *Logger) Clone() core.Logger {
+func (l *Logger) Clone() core.Interface {
 	_l := *l
 	_l.Transport = l.Transport.WithOptions()
 	return &_l
 }
 
-func (l *Logger) Named(name string) core.Logger {
+func (l *Logger) Named(name string) core.Interface {
 	_l := *l
 	_l.Transport = l.Transport.WithOptions().Named(name)
 	_l.Name = l.Transport.Name()

@@ -12,7 +12,7 @@ type ctxKeyType string
 const CtxKey ctxKeyType = "__logger__"
 
 // FromContext retrieves the logger from the context.
-func FromContext(ctx context.Context) core.Logger {
+func FromContext(ctx context.Context) core.Interface {
 	logger, ok := ctx.Value(CtxKey).(*batch.Logger)
 	if ok {
 		return logger
@@ -21,6 +21,6 @@ func FromContext(ctx context.Context) core.Logger {
 }
 
 // WithContext adds a logger to the context.
-func WithContext(ctx context.Context, logger core.Logger) context.Context {
+func WithContext(ctx context.Context, logger core.Interface) context.Context {
 	return context.WithValue(ctx, CtxKey, logger)
 }
