@@ -8,6 +8,7 @@ import (
 	"fmt"
 	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"io"
 	"sync"
 	"time"
 
@@ -171,15 +172,16 @@ func (l *Logger) LogAsync(level logging.Level, msg string, fields ...logging.Fie
 }
 
 func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, fields []logging.Field) (*esapi.Response, error) {
-	req, err := l.BuildRequest(ctx, level, msg, fields)
+	body, err := l.BuildBody(level, msg, fields)
 	if err != nil {
-		l.DebugLogger.Error(ctx, "Failed to build request", logging.E(err))
+		l.DebugLogger.Error(ctx, "Failed to build body", logging.E(err))
 		return nil, err
 	}
-	resp, err := req.Do(ctx, l.Transport)
+	index := l.IndexBuilder(ctx, l, level, msg, fields)
+	resp, err := l.Client.API.Index(index, body)
 	if err != nil {
-		l.DebugLogger.Error(l.Ctx, "Failed to create index request", logging.E(err))
-		return nil, errors.Join(fmt.Errorf("failed to create index request"), err)
+		l.DebugLogger.Error(l.Ctx, "Failed to create index", logging.E(err))
+		return nil, errors.Join(fmt.Errorf("failed to create index"), err)
 	}
 	if resp.IsError() {
 		l.DebugLogger.Error(l.Ctx, "Index request failed", logging.F("status", resp.StatusCode), logging.F("headers", resp.Header), logging.F("response", resp.String()))
@@ -189,9 +191,7 @@ func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, field
 	return resp, nil
 }
 
-func (l *Logger) BuildRequest(ctx context.Context, level logging.Level, msg string, fields []logging.Field) (*esapi.IndexRequest, error) {
-	index := l.IndexBuilder(ctx, l, level, msg, fields)
-
+func (l *Logger) BuildBody(level logging.Level, msg string, fields []logging.Field) (io.Reader, error) {
 	payload := map[string]any{
 		"timestamp": l.NowFunc().Format(time.RFC3339),
 		"message":   msg,
@@ -200,14 +200,14 @@ func (l *Logger) BuildRequest(ctx context.Context, level logging.Level, msg stri
 	}
 
 	if len(l.Fields) > 0 {
-		payload["context"] = make(map[string]any, len(l.Fields))
+		payload["ctx"] = make(map[string]any, len(l.Fields))
 		for _, field := range l.Fields {
 			payload[field.Key] = field.Value
 		}
 	}
 
 	if len(fields) > 0 {
-		payload["fields"] = make(map[string]any, len(fields))
+		payload["data"] = make(map[string]any, len(fields))
 		for _, field := range fields {
 			payload[field.Key] = field.Value
 		}
@@ -218,10 +218,7 @@ func (l *Logger) BuildRequest(ctx context.Context, level logging.Level, msg stri
 		return nil, fmt.Errorf("failed to marshal log payload: %w", err)
 	}
 
-	return &esapi.IndexRequest{
-		Index: index,
-		Body:  bytes.NewReader(body),
-	}, nil
+	return bytes.NewReader(body), nil
 }
 
 func (l *Logger) decreaseCount() {
