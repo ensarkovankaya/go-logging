@@ -14,7 +14,7 @@ type ZapConfigOption = func(cfg *zap.Config)
 type Level = zapcore.Level
 
 var (
-	logLevel   = core.LevelDisabled
+	logLevel   = core.LevelDebug
 	callerSkip = 2
 	debug      = false
 )
