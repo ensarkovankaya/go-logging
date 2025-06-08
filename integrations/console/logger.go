@@ -81,6 +81,10 @@ func (l *Logger) Flush(ctx context.Context) error {
 	return l.getLogger(ctx).Sync()
 }
 
+func (l *Logger) SetLevel(level core.Level) {
+	l.Transport = l.Transport.WithOptions(zap.IncreaseLevel(getZapLevel(level)))
+}
+
 func (l *Logger) getLogger(ctx context.Context) *zap.Logger {
 	transport, ok := ctx.Value(CtxKey).(*zap.Logger)
 	if !ok || transport == nil {
