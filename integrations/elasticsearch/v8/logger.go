@@ -16,10 +16,9 @@ import (
 )
 
 var (
-	defaultIndexName    = "logs"
-	defaultLevel        = logging.LevelDebug
-	defaultFlushTimeout = time.Second * 5
-	flushCheckInterval  = time.Millisecond * 100
+	defaultIndexName   = "logs"
+	defaultLevel       = logging.LevelDebug
+	flushCheckInterval = time.Millisecond * 100
 )
 
 type Option func(l *Logger)
@@ -35,12 +34,10 @@ type Logger struct {
 	Client       *elasticsearch8.Client
 	Name         string
 	NowFunc      func() time.Time
-	Fields       []logging.Field
+	Extra        []logging.Field
 	Level        logging.Level
 	IndexBuilder IndexBuilder
-	FlushTimeout time.Duration
 	Ctx          context.Context
-	Cancel       context.CancelFunc
 	DebugLogger  logging.Logger
 	lock         sync.Locker
 	count        int
@@ -51,15 +48,12 @@ func New(options ...Option) *Logger {
 	if err != nil {
 		panic(fmt.Sprintf("Elastic initialization failed: %v", err))
 	}
-	ctx, cancel := context.WithCancel(context.Background())
 	logger := &Logger{
 		Client:       client,
 		NowFunc:      time.Now,
 		Level:        defaultLevel,
 		IndexBuilder: DefaultIndexBuilder,
-		FlushTimeout: defaultFlushTimeout,
-		Ctx:          ctx,
-		Cancel:       cancel,
+		Ctx:          context.Background(),
 		DebugLogger:  &noopLogger{},
 		lock:         &sync.Mutex{},
 		count:        0,
@@ -93,7 +87,7 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 
 func (l *Logger) With(fields ...logging.Field) logging.Logger {
 	_l := l.clone()
-	_l.Fields = append(l.Fields, fields...)
+	_l.Extra = append(l.Extra, fields...)
 	return l
 }
 
@@ -123,12 +117,9 @@ func (l *Logger) Error(_ context.Context, msg string, fields ...logging.Field) {
 
 func (l *Logger) Flush(ctx context.Context) error {
 	l.DebugLogger.Debug(ctx, "Flushing index")
-	defer l.Cancel()
 	if l.getCount() <= 0 {
 		return nil
 	}
-	maxTimer := time.NewTimer(l.FlushTimeout)
-	defer maxTimer.Stop()
 	intervalTimer := time.NewTimer(flushCheckInterval)
 	defer intervalTimer.Stop()
 	for {
@@ -149,14 +140,6 @@ func (l *Logger) Flush(ctx context.Context) error {
 			}
 			l.DebugLogger.Debug(ctx, "Checking for remaining logs to flush", logging.F("remaining", count))
 			intervalTimer.Reset(flushCheckInterval)
-		case <-maxTimer.C:
-			count := l.getCount()
-			if count <= 0 {
-				l.DebugLogger.Info(ctx, "Flush completed, no logs remaining")
-				return nil
-			}
-			l.DebugLogger.Error(ctx, "Flush timed out", logging.F("remaining", count))
-			return fmt.Errorf("timed out waiting for logs to be flushed: %d remaining", l.count)
 		}
 	}
 }
@@ -193,22 +176,24 @@ func (l *Logger) buildDocument(level logging.Level, msg string, fields []logging
 	payload := map[string]any{
 		"timestamp": l.NowFunc().Format(time.RFC3339),
 		"message":   msg,
-		"logger":    l.Name,
 		"level":     level.String(),
 	}
+	if l.Name != "" {
+		payload["logger"] = l.Name
+	}
 
-	if len(l.Fields) > 0 {
-		payload["ctx"] = make(map[string]any, len(l.Fields))
-		for _, field := range l.Fields {
+	if len(l.Extra) > 0 {
+		for _, field := range l.Extra {
 			payload[field.Key] = field.Value
 		}
 	}
 
 	if len(fields) > 0 {
-		payload["data"] = make(map[string]any, len(fields))
+		dataFields := make(map[string]any, len(fields))
 		for _, field := range fields {
-			payload[field.Key] = field.Value
+			dataFields[field.Key] = field.Value
 		}
+		payload["fields"] = dataFields
 	}
 
 	body, err := json.Marshal(payload)
@@ -242,15 +227,12 @@ func (l *Logger) CanLog(level logging.Level) bool {
 }
 
 func (l *Logger) clone() *Logger {
-	ctx, cancel := context.WithCancel(context.WithoutCancel(l.Ctx))
 	_l := *l
-	_l.Ctx = ctx
-	_l.Cancel = cancel
 	_l.lock = &sync.Mutex{}
 	_l.count = 0
-	_l.Fields = make([]logging.Field, 0, len(l.Fields))
-	for _, f := range l.Fields {
-		_l.Fields = append(_l.Fields, f)
+	_l.Extra = make([]logging.Field, 0, len(l.Extra))
+	for _, f := range l.Extra {
+		_l.Extra = append(_l.Extra, f)
 	}
 	return &_l
 }
