@@ -71,6 +71,7 @@ func (t *Serializer) Response(response *http.Response) (map[string]any, error) {
 		if err != nil {
 			return nil, errors.Join(fmt.Errorf("failed to read body"), err)
 		}
+		defer func() { _ = response.Body.Close() }()
 		if t.ResponseJSON && response.Header.Get("Content-Type") == "application/json" {
 			var jsonBody map[string]any
 			if err = json.Unmarshal(body, &jsonBody); err != nil {
