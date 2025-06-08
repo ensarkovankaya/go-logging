@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
@@ -15,8 +16,8 @@ import (
 
 var (
 	defaultIndexName    = "logs"
-	defaultLevel        = logging.LevelInfo
-	defaultFlushTimeout = time.Second
+	defaultLevel        = logging.LevelDebug
+	defaultFlushTimeout = time.Second * 5
 	flushCheckInterval  = time.Millisecond * 100
 )
 
@@ -48,7 +49,7 @@ type Logger struct {
 func New(options ...Option) *Logger {
 	client, err := Initialize()
 	if err != nil {
-		panic(fmt.Sprintf("Logger initialization failed: %v", err))
+		panic(fmt.Sprintf("Elastic initialization failed: %v", err))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := &Logger{
@@ -165,26 +166,27 @@ func (l *Logger) LogAsync(level logging.Level, msg string, fields ...logging.Fie
 	l.increaseCount()
 	go func() {
 		defer l.decreaseCount()
-		resp, err := l.Log(l.Ctx, level, msg, fields)
-		if err != nil {
-			l.DebugLogger.Error(l.Ctx, "Failed to create index request", logging.E(err))
-			return
-		}
-		if resp.IsError() {
-			l.DebugLogger.Error(l.Ctx, "Index request failed", logging.F("status", resp.StatusCode), logging.F("headers", resp.Header), logging.F("response", resp.String()))
-		} else {
-			l.DebugLogger.Info(l.Ctx, "Index request succeeded", logging.F("body", resp.String()))
-		}
+		_, _ = l.Log(l.Ctx, level, msg, fields)
 	}()
 }
 
 func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, fields []logging.Field) (*esapi.Response, error) {
 	req, err := l.BuildRequest(ctx, level, msg, fields)
 	if err != nil {
-		l.DebugLogger.Error(ctx, "Failed to create request", logging.E(err))
+		l.DebugLogger.Error(ctx, "Failed to build request", logging.E(err))
 		return nil, err
 	}
-	return req.Do(ctx, l.Transport)
+	resp, err := req.Do(ctx, l.Transport)
+	if err != nil {
+		l.DebugLogger.Error(l.Ctx, "Failed to create index request", logging.E(err))
+		return nil, errors.Join(fmt.Errorf("failed to create index request"), err)
+	}
+	if resp.IsError() {
+		l.DebugLogger.Error(l.Ctx, "Index request failed", logging.F("status", resp.StatusCode), logging.F("headers", resp.Header), logging.F("response", resp.String()))
+	} else {
+		l.DebugLogger.Info(l.Ctx, "Index request succeeded", logging.F("body", resp.String()))
+	}
+	return resp, nil
 }
 
 func (l *Logger) BuildRequest(ctx context.Context, level logging.Level, msg string, fields []logging.Field) (*esapi.IndexRequest, error) {

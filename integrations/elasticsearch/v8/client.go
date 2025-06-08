@@ -7,9 +7,9 @@ import (
 type ClientOption func(cfg *elasticsearch8.Config)
 
 func Initialize(options ...ClientOption) (*elasticsearch8.Client, error) {
-	cfg := elasticsearch8.Config{}
+	cfg := &elasticsearch8.Config{}
 	for _, opt := range options {
-		opt(&cfg)
+		opt(cfg)
 	}
-	return elasticsearch8.NewClient(cfg)
+	return elasticsearch8.NewClient(*cfg)
 }
