@@ -42,7 +42,6 @@ type Logger struct {
 	Ctx          context.Context
 	Cancel       context.CancelFunc
 	DebugLogger  logging.Logger
-	Transport    esapi.Transport
 	lock         sync.Locker
 	count        int
 }
@@ -62,7 +61,6 @@ func New(options ...Option) *Logger {
 		Ctx:          ctx,
 		Cancel:       cancel,
 		DebugLogger:  &noopLogger{},
-		Transport:    DefaultTransport,
 		lock:         &sync.Mutex{},
 		count:        0,
 	}
