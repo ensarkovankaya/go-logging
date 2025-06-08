@@ -129,7 +129,7 @@ func (l *Logger) Flush(ctx context.Context) error {
 			count := l.getCount()
 			if count > 0 {
 				l.DebugLogger.Error(ctx, "Flush cancelled before all logs were flushed", logging.F("remaining", count))
-				return fmt.Errorf("not all logs were flushed: %d remaining", l.count)
+				return fmt.Errorf("not all logs were flushed: %d remaining", count)
 			}
 			l.DebugLogger.Info(ctx, "Flush cancelled, no logs remaining")
 			return nil
@@ -176,25 +176,30 @@ func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, field
 func (l *Logger) buildDocument(level logging.Level, msg string, fields []logging.Field) (io.Reader, error) {
 	payload := map[string]any{
 		"timestamp": l.NowFunc().Format(time.RFC3339),
-		"message":   msg,
 		"level":     level.String(),
 	}
+	if msg != "" {
+		payload["message"] = msg
+	}
 	if l.Name != "" {
-		payload["logger"] = l.Name
+		payload["name"] = l.Name
 	}
 
 	if len(l.Extra) > 0 {
 		for _, field := range l.Extra {
+			if _, ok := payload[field.Key]; ok {
+				l.DebugLogger.Warning(l.Ctx, "Field already exists in payload, overwriting", logging.F("key", field.Key))
+			}
 			payload[field.Key] = field.Value
 		}
 	}
 
 	if len(fields) > 0 {
-		dataFields := make(map[string]any, len(fields))
+		data := make(map[string]any, len(fields))
 		for _, field := range fields {
-			dataFields[field.Key] = field.Value
+			data[field.Key] = field.Value
 		}
-		payload["fields"] = dataFields
+		payload["data"] = data
 	}
 
 	body, err := json.Marshal(payload)
