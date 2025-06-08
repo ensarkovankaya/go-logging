@@ -28,7 +28,7 @@ type IndexBuilder func(ctx context.Context, logger *Logger, level logging.Level,
 const Type = "elasticsearch"
 
 var DefaultIndexBuilder IndexBuilder = func(_ context.Context, logger *Logger, _ logging.Level, _ string, _ []logging.Field) string {
-	return fmt.Sprintf("%s-%s", defaultIndexName, time.Now().Format("2006-01-02-15-04-05"))
+	return defaultIndexName
 }
 
 type Logger struct {
@@ -172,7 +172,7 @@ func (l *Logger) LogAsync(level logging.Level, msg string, fields ...logging.Fie
 }
 
 func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, fields []logging.Field) (*esapi.Response, error) {
-	body, err := l.BuildBody(level, msg, fields)
+	body, err := l.buildDocument(level, msg, fields)
 	if err != nil {
 		l.DebugLogger.Error(ctx, "Failed to build body", logging.E(err))
 		return nil, err
@@ -191,7 +191,7 @@ func (l *Logger) Log(ctx context.Context, level logging.Level, msg string, field
 	return resp, nil
 }
 
-func (l *Logger) BuildBody(level logging.Level, msg string, fields []logging.Field) (io.Reader, error) {
+func (l *Logger) buildDocument(level logging.Level, msg string, fields []logging.Field) (io.Reader, error) {
 	payload := map[string]any{
 		"timestamp": l.NowFunc().Format(time.RFC3339),
 		"message":   msg,
