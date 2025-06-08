@@ -9,6 +9,7 @@ import (
 	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"io"
+	"os"
 	"sync"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 var (
 	defaultIndexName   = "logs"
 	defaultLevel       = logging.LevelDebug
-	flushCheckInterval = time.Millisecond * 100
+	flushCheckInterval = time.Second
 )
 
 type Option func(l *Logger)
@@ -238,4 +239,16 @@ func (l *Logger) clone() *Logger {
 }
 
 func init() {
+	if os.Getenv("ELASTIC_LOGGER_FLUSH_CHECK_INTERVAL") != "" {
+		if interval, err := time.ParseDuration(os.Getenv("ELASTIC_LOGGER_FLUSH_CHECK_INTERVAL")); err == nil {
+			flushCheckInterval = interval
+		} else {
+			_, _ = fmt.Fprintf(
+				os.Stderr,
+				"Invalid ELASTIC_LOGGER_FLUSH_CHECK_INTERVAL value: %s, using default %v\n",
+				os.Getenv("ELASTIC_LOGGER_FLUSH_CHECK_INTERVAL"),
+				flushCheckInterval,
+			)
+		}
+	}
 }
