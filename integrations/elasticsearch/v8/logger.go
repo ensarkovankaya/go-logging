@@ -80,7 +80,7 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 
 func (l *Logger) With(fields ...core.Field) core.Interface {
 	_l := l.clone()
-	_l.Extra = append(l.Extra, fields...)
+	_l.Extra = append(_l.Extra, fields...)
 	return l
 }
 
@@ -186,7 +186,7 @@ func (l *Logger) CanLog(level core.Level) bool {
 
 func (l *Logger) clone() *Logger {
 	_l := *l
-	_l.Extra = make([]core.Field, 0, len(l.Extra))
+	_l.Extra = make([]core.Field, 0)
 	for _, f := range l.Extra {
 		_l.Extra = append(_l.Extra, f)
 	}
