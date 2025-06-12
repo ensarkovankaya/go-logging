@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/ensarkovankaya/go-logging/core"
+	_http "github.com/ensarkovankaya/go-logging/http"
 )
 
 type clientLogger struct {
+	_http.Serializer
 	ctx                 context.Context
 	logger              core.Interface
 	requestBodyEnabled  bool
@@ -18,7 +20,12 @@ type clientLogger struct {
 }
 
 func NewClientLogger(logger core.Interface, options ...func(l *clientLogger)) elastictransport.Logger {
-	l := &clientLogger{ctx: context.Background(), logger: logger}
+	l := &clientLogger{
+		ctx:                 context.Background(),
+		logger:              logger,
+		responseBodyEnabled: true,
+		requestBodyEnabled:  true,
+	}
 	for _, opt := range options {
 		opt(l)
 	}
@@ -26,7 +33,15 @@ func NewClientLogger(logger core.Interface, options ...func(l *clientLogger)) el
 }
 
 func (l *clientLogger) LogRoundTrip(req *http.Request, res *http.Response, err error, start time.Time, dur time.Duration) error {
-	l.logger.Debug(l.ctx, "Elasticsearch round trip", core.F("req", req), core.F("res", res), core.F("err", err), core.F("start", start), core.F("duration", dur))
+	request, err := l.Serializer.Request(req)
+	if err != nil {
+		return err
+	}
+	response, err := l.Serializer.Response(res)
+	if err != nil {
+		return err
+	}
+	l.logger.Debug(l.ctx, "Elasticsearch round trip", core.F("req", request), core.F("res", response), core.F("err", err), core.F("start", start), core.F("duration", dur))
 	return nil
 }
 
