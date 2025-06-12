@@ -39,7 +39,7 @@ type Logger struct {
 	Level        core.Level
 	IndexBuilder IndexBuilder
 	DebugLogger  core.Interface
-	Indexer      esutil.BulkIndexer
+	Sink         esutil.BulkIndexer
 }
 
 func New(options ...Option) *Logger {
@@ -48,7 +48,7 @@ func New(options ...Option) *Logger {
 		Level:        defaultLevel,
 		IndexBuilder: DefaultIndexBuilder,
 		DebugLogger:  &noopLogger{},
-		Indexer:      globalBulkIndexer,
+		Sink:         globalBulkIndexer,
 	}
 	for _, opt := range options {
 		opt(logger)
@@ -108,7 +108,12 @@ func (l *Logger) Error(ctx context.Context, msg string, fields ...core.Field) {
 }
 
 func (l *Logger) Flush(ctx context.Context) error {
-	return l.Indexer.Close(ctx)
+	if err := l.Sink.Close(ctx); err != nil {
+		l.DebugLogger.Error(ctx, "Failed to close indexer", core.E(err))
+		return err
+	}
+	l.DebugLogger.Debug(ctx, "Flushed indexer", core.F("stats", l.Sink.Stats()))
+	return nil
 }
 
 func (l *Logger) Log(ctx context.Context, level core.Level, msg string, fields []core.Field) {
@@ -122,7 +127,7 @@ func (l *Logger) Log(ctx context.Context, level core.Level, msg string, fields [
 		l.DebugLogger.Error(ctx, "Failed to build index", core.E(err))
 		return
 	}
-	if err = l.Indexer.Add(ctx, esutil.BulkIndexerItem{
+	if err = l.Sink.Add(ctx, esutil.BulkIndexerItem{
 		Index: index,
 		Body:  body,
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem) {
