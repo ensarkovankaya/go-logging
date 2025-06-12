@@ -16,6 +16,7 @@ import (
 const (
 	envIndexName = "ELASTICSEARCH_INDEX_NAME"
 	envLogLevel  = "ELASTICSEARCH_LOG_LEVEL"
+	actionType   = "index"
 )
 
 var (
@@ -128,8 +129,9 @@ func (l *Logger) Log(ctx context.Context, level core.Level, msg string, fields [
 		return
 	}
 	if err = l.Sink.Add(ctx, esutil.BulkIndexerItem{
-		Index: index,
-		Body:  body,
+		Action: actionType,
+		Index:  index,
+		Body:   body,
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem) {
 			l.DebugLogger.Info(ctx, "Document added to indexer", core.F("item", item), core.F("resp", resp))
 		},
