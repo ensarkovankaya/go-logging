@@ -81,7 +81,7 @@ func (l *Logger) WithContext(ctx context.Context) context.Context {
 func (l *Logger) With(fields ...core.Field) core.Interface {
 	_l := l.clone()
 	_l.Extra = append(_l.Extra, fields...)
-	return l
+	return _l
 }
 
 func (l *Logger) Debug(ctx context.Context, msg string, fields ...core.Field) {
