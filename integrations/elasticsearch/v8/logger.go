@@ -52,7 +52,7 @@ func New(options ...Option) *Logger {
 		Level:        defaultLevel,
 		IndexBuilder: DefaultIndexBuilder,
 		DebugLogger:  debugLogger,
-		Sink:         globalBulkIndexer,
+		Sink:         globalSink,
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem) {
 			debugLogger.Info(ctx, "Document added to indexer", core.F("documentID", item.DocumentID), core.F("resp", resp))
 		},
