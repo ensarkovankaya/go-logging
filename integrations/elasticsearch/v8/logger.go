@@ -41,15 +41,24 @@ type Logger struct {
 	IndexBuilder IndexBuilder
 	DebugLogger  core.Interface
 	Sink         esutil.BulkIndexer
+	OnSuccess    func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem)
+	OnFailure    func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error)
 }
 
 func New(options ...Option) *Logger {
+	debugLogger := &noopLogger{}
 	logger := &Logger{
 		NowFunc:      time.Now,
 		Level:        defaultLevel,
 		IndexBuilder: DefaultIndexBuilder,
-		DebugLogger:  &noopLogger{},
+		DebugLogger:  debugLogger,
 		Sink:         globalBulkIndexer,
+		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem) {
+			debugLogger.Info(ctx, "Document added to indexer", core.F("documentID", item.DocumentID), core.F("resp", resp))
+		},
+		OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error) {
+			debugLogger.Error(ctx, "Failed to add document to indexer", core.E(err), core.F("documentID", item.DocumentID), core.F("resp", resp))
+		},
 	}
 	for _, opt := range options {
 		opt(logger)
@@ -129,15 +138,11 @@ func (l *Logger) Log(ctx context.Context, level core.Level, msg string, fields [
 		return
 	}
 	if err = l.Sink.Add(ctx, esutil.BulkIndexerItem{
-		Action: actionType,
-		Index:  index,
-		Body:   body,
-		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem) {
-			l.DebugLogger.Info(ctx, "Document added to indexer", core.F("item", item), core.F("resp", resp))
-		},
-		OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error) {
-			l.DebugLogger.Error(ctx, "Failed to add document to indexer", core.E(err), core.F("item", item), core.F("resp", resp))
-		},
+		Action:    actionType,
+		Index:     index,
+		Body:      body,
+		OnSuccess: l.OnSuccess,
+		OnFailure: l.OnFailure,
 	}); err != nil {
 		l.DebugLogger.Error(ctx, "Failed to add document to indexer", core.E(err), core.F("index", index))
 	}
