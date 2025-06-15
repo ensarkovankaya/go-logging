@@ -2,10 +2,11 @@ package console
 
 import (
 	"fmt"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )

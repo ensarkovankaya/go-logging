@@ -1,9 +1,10 @@
 package http
 
 import (
-	"github.com/google/uuid"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )

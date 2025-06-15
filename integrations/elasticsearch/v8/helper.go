@@ -2,10 +2,11 @@ package elastic
 
 import (
 	"context"
-	"github.com/elastic/elastic-transport-go/v8/elastictransport"
-	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"net/http"
 	"time"
+
+	"github.com/elastic/elastic-transport-go/v8/elastictransport"
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 
 	"github.com/ensarkovankaya/go-logging/core"
 	_http "github.com/ensarkovankaya/go-logging/http"
@@ -32,7 +33,7 @@ func NewClientLogger(logger core.Interface, options ...func(l *clientLogger)) el
 	return l
 }
 
-func (l *clientLogger) LogRoundTrip(req *http.Request, res *http.Response, err error, start time.Time, dur time.Duration) error {
+func (l *clientLogger) LogRoundTrip(req *http.Request, res *http.Response, clientErr error, start time.Time, dur time.Duration) error {
 	request, err := l.Serializer.Request(req)
 	if err != nil {
 		return err
@@ -41,7 +42,7 @@ func (l *clientLogger) LogRoundTrip(req *http.Request, res *http.Response, err e
 	if err != nil {
 		return err
 	}
-	l.logger.Debug(l.ctx, "Elasticsearch round trip", core.F("req", request), core.F("res", response), core.F("err", err), core.F("start", start), core.F("duration", dur))
+	l.logger.Debug(l.ctx, "Elasticsearch round trip", core.F("req", request), core.F("res", response), core.F("err", clientErr), core.F("start", start), core.F("duration", dur))
 	return nil
 }
 

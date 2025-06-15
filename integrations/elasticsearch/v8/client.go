@@ -5,11 +5,13 @@ package elastic
 
 import (
 	"fmt"
-	"github.com/cenkalti/backoff/v5"
-	"github.com/elastic/go-elasticsearch/v8"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/cenkalti/backoff/v5"
+
+	"github.com/elastic/go-elasticsearch/v8"
 )
 
 var (

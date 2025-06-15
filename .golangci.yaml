@@ -1,0 +1,57 @@
+run:
+  concurrency: 4
+  timeout: 5m
+  go: "1.24"
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+
+linters:
+  enable:
+    - errcheck # default
+    - gosimple # default
+    - govet # default
+    - ineffassign # default
+    - staticcheck # default
+    - unused # default
+    - gosec
+    - bodyclose
+    - goconst
+    - gocyclo
+    - gofmt
+    - goimports
+    - goprintffuncname
+    - lll
+    - misspell
+    - nakedret
+    - whitespace
+    - revive
+
+linters-settings:
+  gosec:
+    excludes:
+      - G115
+  govet:
+    enable:
+      - buildtag
+
+  lll:
+    line-length: 180 # Uzun satır limitini belirle (isteğe bağlı)
+
+  gocyclo:
+    min-complexity: 30 # Karmaşıklık seviyesi
+
+  misspell:
+    locale: "US"
+
+issues:
+  exclude-rules:
+    - linters:
+        - goimports
+      text: ".*`goimports`-ed.*"
+
+  max-issues-per-linter: 0  # Her linter için sınırsız hata göster
+  max-same-issues: 0        # Aynı hatadan sınırsız sayıda göster

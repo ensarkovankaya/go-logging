@@ -3,10 +3,11 @@ package sentry
 import (
 	"context"
 	"fmt"
-	"github.com/getsentry/sentry-go"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/getsentry/sentry-go"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )
@@ -144,6 +145,9 @@ func getFields() []core.Field {
 	timestamp := time.Date(2023, 10, 1, 12, 0, 0, 0, zone)
 	twoMinutesTwentyThree := time.Minute*2 + time.Second*23
 
+	type ctxKetType string
+	const ctxKey ctxKetType = "context_test_key"
+
 	return []core.Field{
 		core.F("str", "value"),
 		core.F("int", 1),
@@ -157,7 +161,7 @@ func getFields() []core.Field {
 		core.F("error", err),
 		core.F("error_pointer", &err),
 		core.F("context", context.Background()),
-		core.F("context_with_value", context.WithValue(context.Background(), "key", "value")),
+		core.F("context_with_value", context.WithValue(context.Background(), ctxKey, "value")),
 		core.F("timestamp", timestamp),
 		core.F("duration", twoMinutesTwentyThree),
 	}

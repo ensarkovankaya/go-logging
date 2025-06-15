@@ -2,8 +2,9 @@ package gorm
 
 import (
 	"context"
-	gormLogger "gorm.io/gorm/logger"
 	"time"
+
+	gormLogger "gorm.io/gorm/logger"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )

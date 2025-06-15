@@ -93,7 +93,7 @@ func (t *Serializer) Headers(headers http.Header) map[string]any {
 		if len(values) > 1 {
 			// If there are multiple values for the same header, we store them as a slice.
 			// This is useful for headers like "Set-Cookie" which can have multiple values.
-			values = append([]string{}, values...) // Create a copy to avoid modifying the original slice
+			serialized[key] = append([]string{}, values...) // Create a copy to avoid modifying the original slice
 		} else if len(values) == 0 {
 			// If there are no values, we set it to nil to indicate absence.
 			serialized[key] = nil

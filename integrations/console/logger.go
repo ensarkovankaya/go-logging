@@ -3,6 +3,7 @@ package console
 import (
 	"context"
 	"fmt"
+
 	"go.uber.org/zap"
 
 	"github.com/ensarkovankaya/go-logging/core"

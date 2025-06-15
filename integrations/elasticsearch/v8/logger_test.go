@@ -2,10 +2,11 @@ package elastic
 
 import (
 	"context"
-	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )
@@ -55,10 +56,12 @@ func Test_Logger_CLone(t *testing.T) {
 }
 
 func Test_Logger_WithContext(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "key", "value")
+	type ctxKeyType string
+	const ctxKey ctxKeyType = "logger"
+	ctx := context.WithValue(context.Background(), ctxKey, "value")
 	logger, _ := getTestLogger(t)
 	ctx = logger.WithContext(ctx)
-	if ctx.Value("key") != "value" {
+	if ctx.Value(ctxKey) != "value" {
 		t.Errorf("Expected context value 'value', got '%v'", ctx.Value("key"))
 	}
 }
@@ -464,6 +467,7 @@ func Test_Logger_Debug_Multiple(t *testing.T) {
 	})
 }
 
+//nolint:gocyclo
 func testLogger(t *testing.T, loggerLevel core.Level, logs []testCase) {
 	logger, transport := getTestLogger(t)
 	logger.Level = loggerLevel
@@ -474,9 +478,9 @@ func testLogger(t *testing.T, loggerLevel core.Level, logs []testCase) {
 	for _, log := range logs {
 		if log.ShouldIndex {
 			indexedLogs = append(indexedLogs, log)
-			expectedStats.NumIndexed += 1
-			expectedStats.NumAdded += 1
-			expectedStats.NumFlushed += 1
+			expectedStats.NumIndexed++
+			expectedStats.NumAdded++
+			expectedStats.NumFlushed++
 		}
 	}
 

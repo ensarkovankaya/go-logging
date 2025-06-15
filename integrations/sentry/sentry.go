@@ -2,10 +2,11 @@ package sentry
 
 import (
 	"fmt"
-	"github.com/getsentry/sentry-go"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/getsentry/sentry-go"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )

@@ -2,9 +2,10 @@ package file
 
 import (
 	"fmt"
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"os"
 
 	"github.com/ensarkovankaya/go-logging/integrations/console"
 )

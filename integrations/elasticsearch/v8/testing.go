@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v8"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/elastic/go-elasticsearch/v8"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )
@@ -144,10 +145,10 @@ func buildIndexResponse(t *testing.T, logCount int) *http.Response {
 		"took":   526,
 		"items":  items,
 	}
-	return buildHttpResponse(t, http.StatusOK, payload)
+	return buildHTTPResponse(t, http.StatusOK, payload)
 }
 
-func buildHttpResponse(t *testing.T, statusCode int, payload map[string]any) *http.Response {
+func buildHTTPResponse(t *testing.T, statusCode int, payload map[string]any) *http.Response {
 	var body io.ReadCloser
 	if payload != nil {
 		data, err := json.Marshal(payload)

@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/getsentry/sentry-go"
-	"github.com/getsentry/sentry-go/attribute"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/getsentry/sentry-go"
+	"github.com/getsentry/sentry-go/attribute"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )
@@ -264,21 +265,21 @@ func init() {
 		if level, err := core.ParseLevel(os.Getenv(envSentryEventLevel)); err == nil {
 			defaultEventLevel = level
 		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environemnt value, using default: %s\n", envSentryEventLevel, defaultEventLevel.String())
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environment value, using default: %s\n", envSentryEventLevel, defaultEventLevel.String())
 		}
 	}
 	if os.Getenv(envSentryLogLevel) != "" {
 		if level, err := core.ParseLevel(os.Getenv(envSentryLogLevel)); err == nil {
 			defaultLogLevel = level
 		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environemnt value, using default: %s\n", envSentryLogLevel, defaultLogLevel.String())
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environment value, using default: %s\n", envSentryLogLevel, defaultLogLevel.String())
 		}
 	}
 	if os.Getenv(envSentryBreadcrumbLevel) != "" {
 		if level, err := core.ParseLevel(os.Getenv(envSentryBreadcrumbLevel)); err == nil {
 			defaultBreadcrumbLevel = level
 		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environemnt value, using default: %s\n", envSentryBreadcrumbLevel, defaultBreadcrumbLevel.String())
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid %s environment value, using default: %s\n", envSentryBreadcrumbLevel, defaultBreadcrumbLevel.String())
 		}
 	}
 }

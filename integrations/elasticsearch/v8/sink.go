@@ -2,11 +2,12 @@ package elastic
 
 import (
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 )
 
 const (

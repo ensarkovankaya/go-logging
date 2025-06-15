@@ -5,10 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"io"
 	"os"
 	"time"
+
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 
 	"github.com/ensarkovankaya/go-logging/core"
 )
@@ -31,7 +32,7 @@ type DocumentIDBuilder func() string
 const Type = "elasticsearch"
 
 var (
-	DefaultIndexBuilder IndexBuilder = func(_ context.Context, logger *Logger, _ core.Level, _ string, _ []core.Field) (string, error) {
+	DefaultIndexBuilder IndexBuilder = func(_ context.Context, _ *Logger, _ core.Level, _ string, _ []core.Field) (string, error) {
 		return fmt.Sprintf("%v-%v", defaultIndexName, time.Now().Format("2006-01-02-15-01-05")), nil
 	}
 	DefaultDocumentIDBuilder DocumentIDBuilder = func() string {
@@ -201,9 +202,7 @@ func (l *Logger) CanLog(level core.Level) bool {
 func (l *Logger) clone() *Logger {
 	_l := *l
 	_l.Extra = make([]core.Field, 0)
-	for _, f := range l.Extra {
-		_l.Extra = append(_l.Extra, f)
-	}
+	_l.Extra = append(_l.Extra, l.Extra...)
 	return &_l
 }
 
