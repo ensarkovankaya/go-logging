@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	go test -v ./...
+	docker run -t --rm -v $(PWD):/app -w /app golang:1.24.4-alpine3.22 go test -v ./...
 
 .PHONY: lint
 lint:
