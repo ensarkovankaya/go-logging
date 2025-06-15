@@ -16,6 +16,7 @@ jobs:
     env:
       GO111MODULE: on
       CGO_ENABLED: 1
+      ELASTICSEARCH_SINK_NUM_WORKERS: 1
     steps:
       - uses: actions/checkout@v4
 
