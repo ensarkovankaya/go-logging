@@ -26,33 +26,41 @@ var (
 
 type Option func(l *Logger)
 type IndexBuilder func(ctx context.Context, logger *Logger, level core.Level, msg string, fields []core.Field) (string, error)
+type DocumentIDBuilder func() string
 
 const Type = "elasticsearch"
 
-var DefaultIndexBuilder IndexBuilder = func(_ context.Context, logger *Logger, _ core.Level, _ string, _ []core.Field) (string, error) {
-	return fmt.Sprintf("%v-%v", defaultIndexName, time.Now().Format("2006-01-02-15-01-05")), nil
-}
+var (
+	DefaultIndexBuilder IndexBuilder = func(_ context.Context, logger *Logger, _ core.Level, _ string, _ []core.Field) (string, error) {
+		return fmt.Sprintf("%v-%v", defaultIndexName, time.Now().Format("2006-01-02-15-01-05")), nil
+	}
+	DefaultDocumentIDBuilder DocumentIDBuilder = func() string {
+		return ""
+	}
+)
 
 type Logger struct {
-	Name         string
-	NowFunc      func() time.Time
-	Extra        []core.Field
-	Level        core.Level
-	IndexBuilder IndexBuilder
-	DebugLogger  core.Interface
-	Sink         esutil.BulkIndexer
-	OnSuccess    func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem)
-	OnFailure    func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error)
+	Name              string
+	NowFunc           func() time.Time
+	Extra             []core.Field
+	Level             core.Level
+	IndexBuilder      IndexBuilder
+	DocumentIDBuilder DocumentIDBuilder
+	DebugLogger       core.Interface
+	Sink              esutil.BulkIndexer
+	OnSuccess         func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem)
+	OnFailure         func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem, err error)
 }
 
 func New(options ...Option) *Logger {
 	debugLogger := &noopLogger{}
 	logger := &Logger{
-		NowFunc:      time.Now,
-		Level:        defaultLevel,
-		IndexBuilder: DefaultIndexBuilder,
-		DebugLogger:  debugLogger,
-		Sink:         globalSink,
+		NowFunc:           time.Now,
+		Level:             defaultLevel,
+		IndexBuilder:      DefaultIndexBuilder,
+		DocumentIDBuilder: DefaultDocumentIDBuilder,
+		DebugLogger:       debugLogger,
+		Sink:              globalSink,
 		OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, resp esutil.BulkIndexerResponseItem) {
 			debugLogger.Info(ctx, "Document added to indexer", core.F("documentID", item.DocumentID), core.F("resp", resp))
 		},
@@ -138,11 +146,12 @@ func (l *Logger) Log(ctx context.Context, level core.Level, msg string, fields [
 		return
 	}
 	if err = l.Sink.Add(ctx, esutil.BulkIndexerItem{
-		Action:    actionType,
-		Index:     index,
-		Body:      body,
-		OnSuccess: l.OnSuccess,
-		OnFailure: l.OnFailure,
+		DocumentID: l.DocumentIDBuilder(),
+		Action:     actionType,
+		Index:      index,
+		Body:       body,
+		OnSuccess:  l.OnSuccess,
+		OnFailure:  l.OnFailure,
 	}); err != nil {
 		l.DebugLogger.Error(ctx, "Failed to add document to indexer", core.E(err), core.F("index", index))
 	}

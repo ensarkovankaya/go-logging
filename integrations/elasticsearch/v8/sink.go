@@ -28,7 +28,7 @@ func ReplaceGlobalSink(indexer esutil.BulkIndexer) {
 	globalSink = indexer
 }
 
-func InitializeSink(options ...SinkOption) (esutil.BulkIndexer, error) {
+func NewSink(options ...SinkOption) (esutil.BulkIndexer, error) {
 	cfg := &esutil.BulkIndexerConfig{
 		Client:        globalClient,
 		NumWorkers:    numWorkers,

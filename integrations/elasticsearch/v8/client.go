@@ -22,7 +22,7 @@ func ReplaceClient(client *elasticsearch.Client) {
 	globalClient = client
 }
 
-func InitializeClient(options ...ClientOption) (*elasticsearch.Client, error) {
+func NewClient(options ...ClientOption) (*elasticsearch.Client, error) {
 	var err error
 
 	retryBackOff := backoff.NewExponentialBackOff()
@@ -73,21 +73,14 @@ func IsActive() bool {
 	return os.Getenv("ELASTICSEARCH_URL") != ""
 }
 
-func Initialize() error {
-	var err error
-	if globalClient, err = InitializeClient(); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Failed to initialize Elasticsearch client: %v\n", err)
-		return err
-	}
-	if globalSink, err = InitializeSink(); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Failed to initialize Elasticsearch bulk indexer: %v\n", err)
-		return err
-	}
-	return err
-}
-
 func init() {
 	if IsActive() {
-		_ = Initialize()
+		var err error
+		if globalClient, err = NewClient(); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Failed to initialize Elasticsearch client: %v\n", err)
+		}
+		if globalSink, err = NewSink(); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Failed to initialize Elasticsearch bulk indexer: %v\n", err)
+		}
 	}
 }
